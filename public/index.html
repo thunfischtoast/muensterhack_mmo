@@ -44,6 +44,12 @@
       <form id="login-form">
         <label for="name-input">Dein Name</label>
         <input id="name-input" type="text" maxlength="16" autocomplete="nickname" required placeholder="z. B. Leezenheld">
+        <span class="label">Dein Look</span>
+        <div class="look-picker">
+          <button id="look-prev" class="look-arrow" type="button" aria-label="Vorheriger Look">&lt;</button>
+          <canvas id="look-preview" width="16" height="24"></canvas>
+          <button id="look-next" class="look-arrow" type="button" aria-label="Nächster Look">&gt;</button>
+        </div>
         <button id="join-button" type="submit">Los geht's</button>
       </form>
       <p class="hint hint-desktop">WASD / Pfeiltasten oder Klick: laufen<br>Enter: chatten · E: Fahrrad</p>

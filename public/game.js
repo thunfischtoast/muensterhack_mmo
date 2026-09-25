@@ -2,7 +2,7 @@
  * Browser client: login, input (keyboard, click/tap-to-walk, chat), WebSocket
  * networking, local movement with tile collision, camera and canvas rendering.
  */
-import { TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, OBJECTS, SPAWN, BIKES, isSolid } from './map.js';
+import { TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, OBJECTS, SPAWN, BIKES, LOOK_COUNT, isSolid } from './map.js';
 import {
   buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite,
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES,
@@ -36,6 +36,8 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatButton = document.getElementById('chat-button');
 const bikeButton = document.getElementById('bike-button');
+const lookPreview = document.getElementById('look-preview');
+const lookCtx = lookPreview.getContext('2d');
 
 const ground = buildGroundFrames();
 // Objects never move, so their draw order entries are built once.
@@ -53,6 +55,7 @@ const players = new Map();
 const keys = new Set();
 let myId = null;
 let myName = '';
+let myLook = Math.floor(Math.random() * LOOK_COUNT);
 let ws = null;
 let path = [];
 let stuckTime = 0;
@@ -123,7 +126,7 @@ function handleMessage(msg) {
       }
       version = msg.version;
       const me = players.get(myId);
-      const join = { t: 'join', version, name: myName };
+      const join = { t: 'join', version, name: myName, look: myLook };
       send(me ? { ...join, look: me.look, x: me.x, y: me.y } : join);
       break;
     }
@@ -196,6 +199,7 @@ loginForm.addEventListener('submit', (event) => {
   myName = nameInput.value.trim() || 'Gast';
   try {
     localStorage.setItem('mh-name', myName);
+    localStorage.setItem('mh-look', String(myLook));
   } catch {
     // Storage may be unavailable (private mode); the name is only a convenience.
   }
@@ -206,6 +210,8 @@ loginForm.addEventListener('submit', (event) => {
 
 try {
   nameInput.value = localStorage.getItem('mh-name') || '';
+  const look = Number(localStorage.getItem('mh-look') ?? NaN);
+  if (Number.isInteger(look) && look >= 0 && look < LOOK_COUNT) myLook = look;
 } catch {
   // See above.
 }
@@ -253,6 +259,16 @@ chatInput.addEventListener('blur', () => {
 });
 
 chatButton.addEventListener('click', openChat);
+document.getElementById('look-prev').addEventListener('click', () => { myLook = (myLook + LOOK_COUNT - 1) % LOOK_COUNT; });
+document.getElementById('look-next').addEventListener('click', () => { myLook = (myLook + 1) % LOOK_COUNT; });
+
+/** Animated preview of the chosen look on the login screen (idle breathing and blinking). */
+function drawLookPreview(now) {
+  const breath = Math.floor(now / 700) % 2;
+  const blink = now % 3000 < 140;
+  lookCtx.clearRect(0, 0, CHAR_W, CHAR_H);
+  lookCtx.drawImage(getCharacterSprite(myLook, 'down', 0, breath, blink).canvas, 0, 0);
+}
 bikeButton.addEventListener('click', () => {
   toggleBike();
   bikeButton.blur(); // otherwise Space/Enter would keep triggering the focused button
@@ -625,6 +641,7 @@ function loop(now) {
   lastFrame = now;
   if (players.has(myId)) update(dt, now);
   render(now);
+  if (!loginEl.hidden) drawLookPreview(now);
   requestAnimationFrame(loop);
 }
 

@@ -140,8 +140,34 @@ h1 {
   text-align: left;
 }
 
-label {
+label, .label {
   font-size: 14px;
+}
+
+.look-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+#look-preview {
+  width: 48px;
+  height: 72px;
+  image-rendering: pixelated;
+}
+
+.look-arrow {
+  width: 40px;
+  height: 40px;
+  background: var(--yellow);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 3px var(--black), 3px 3px 0 var(--black);
+}
+
+.look-arrow:active {
+  transform: translate(2px, 2px);
+  box-shadow: inset 0 0 0 3px var(--black), 1px 1px 0 var(--black);
 }
 
 input, button {
