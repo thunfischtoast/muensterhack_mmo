@@ -96,7 +96,8 @@ export const OBJECTS = [
   { type: 'lamp', x: 33, y: 17, w: 1, h: 1 },
   { type: 'poolballs', x: 15, y: 20, w: 3, h: 2 },
   // Promenade: linden trees on both sides of the bike path, blue bike-path signs, Buddenturm
-  ...[1, 4, 7, 10, 13].map((y) => ({ type: 'tree', x: 38, y, w: 1, h: 1, v: 0 })),
+  // The tree at y 7 carries a Nestflix nest box (Münsterhack 2025)
+  ...[1, 4, 7, 10, 13].map((y) => ({ type: 'tree', x: 38, y, w: 1, h: 1, v: 0, deco: y === 7 ? 'nestbox' : undefined })),
   ...[1, 4, 7, 10].map((y) => ({ type: 'tree', x: 35, y, w: 1, h: 1, v: 0 })),
   // Leezenflow (Münsterhack 2019): counts down the phase of the bike traffic light further along the path
   { type: 'leezenflow', x: 35, y: 13, w: 1, h: 1 },
@@ -106,11 +107,18 @@ export const OBJECTS = [
   { type: 'buddenturm', x: 38, y: 17, w: 2, h: 2 },
   // Park by the Aasee
   ...[[2, 21], [9, 21], [5, 23], [12, 24], [3, 26], [8, 27], [11, 28], [4, 17], [27, 17], [30, 17]].map(
-    ([x, y], i) => ({ type: 'tree', x, y, w: 1, h: 1, v: i % 3 }),
+    // Two lindens wear Humiditree watering bags (Münsterhack 2019)
+    ([x, y], i) => ({ type: 'tree', x, y, w: 1, h: 1, v: i % 3, deco: i % 3 === 0 && y < 25 ? 'bag' : undefined }),
   ),
   ...[[6, 21], [1, 24], [13, 27], [7, 17], [10, 23]].map(([x, y]) => ({ type: 'bush', x, y, w: 1, h: 1 })),
   { type: 'flowers', x: 9, y: 16, w: 2, h: 1 },
   { type: 'flowers', x: 18, y: 16, w: 2, h: 1 },
+  // Easter eggs for earlier Münsterhack projects
+  { type: 'buoy', x: 19, y: 27, w: 1, h: 1 }, // Hack(a)Tonne 2018
+  { type: 'givebox', x: 8, y: 11, w: 1, h: 1 }, // Givebox Network 2022 / Kiepenkiste 2025
+  { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1 }, // Leihleeze 2017
+  { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1 }, // Kraut und Rüben 2019 / MüMa 2024
+  { type: 'kiosk', x: 34, y: 20, w: 3, h: 1 }, // Corndex 2024
   // Aasee: pedal boats moored at the jetty
   { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
   { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },

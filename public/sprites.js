@@ -39,7 +39,7 @@ export const LOOKS = [
 ];
 if (LOOKS.length !== LOOK_COUNT) throw new Error('LOOKS must match LOOK_COUNT in map.js');
 
-/** 3x5 (M: 5x5, N: 4x5) pixel glyphs for the few words drawn into sprites. */
+/** 3x5 (M: 5x5, N: 4x5, '.': 1x5) pixel glyphs for the few words drawn into sprites. */
 const GLYPHS = {
   M: ['10001', '11011', '10101', '10001', '10001'],
   S: ['111', '100', '111', '001', '111'],
@@ -54,7 +54,19 @@ const GLYPHS = {
   Z: ['111', '001', '010', '100', '111'],
   L: ['100', '100', '100', '100', '111'],
   T: ['111', '010', '010', '010', '010'],
+  O: ['111', '101', '101', '101', '111'],
+  U: ['101', '101', '101', '101', '111'],
+  'Ü': ['101', '000', '101', '101', '111'],
+  B: ['110', '101', '110', '101', '110'],
+  E: ['111', '100', '110', '100', '111'],
+  D: ['110', '101', '101', '101', '110'],
+  '.': ['0', '0', '0', '0', '1'],
   0: ['111', '101', '101', '101', '111'],
+  1: ['010', '110', '010', '010', '111'],
+  4: ['101', '101', '111', '001', '001'],
+  5: ['111', '100', '111', '001', '111'],
+  7: ['111', '001', '010', '010', '010'],
+  8: ['111', '101', '111', '101', '111'],
   2: ['111', '001', '111', '100', '111'],
   6: ['111', '100', '111', '101', '111'],
   ' ': ['0', '0', '0', '0', '0'],
@@ -93,7 +105,10 @@ function addOutline(canvas) {
       if (!a(x, y) && (a(x - 1, y) || a(x + 1, y) || a(x, y - 1) || a(x, y + 1))) edge.push(x, y);
     }
   }
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   for (let i = 0; i < edge.length; i += 2) rect(ctx, BLACK, edge[i], edge[i + 1]);
+  ctx.restore();
 }
 
 /** Draw text with the pixel glyphs; returns the width in pixels. */
@@ -652,9 +667,10 @@ function drawHouse(ctx, v) {
     rect(ctx, '#261a12', ax, 62, aw, 2);
   }
   if (townhall) {
-    // Gilded plaque above the middle pillar
-    rect(ctx, BLACK, 29, 53, 6, 4);
-    rect(ctx, YELLOW, 30, 54, 4, 2);
+    // Gilded "1648" cartouche under the gable: Peace of Westphalia (1648_reloaded, Münsterhack 2023)
+    rect(ctx, YELLOW, 23, 19, 18, 7);
+    rect(ctx, '#c8a810', 23, 25, 18, 1);
+    pixelText(ctx, '1648', 32 - Math.ceil(pixelTextWidth('1648') / 2), 20, '#5a3a10');
   } else {
     // Shop display in one arch and a hanging shop sign on a bracket
     rect(ctx, [RED, YELLOW][v % 2], [45, 25, 5][v % 3] + 4, 72, 6, 8);
@@ -936,7 +952,7 @@ function drawBuddenturm(ctx) {
 }
 
 /** Tree variants: 0 linden (Promenade), 1 round dark beech, 2 conifer; 32x40 with a soft ground shadow. */
-function drawTree(ctx, v) {
+function drawTree(ctx, v, deco) {
   rect(ctx, '#6b4a2a', 14, 26, 4, 11);
   rect(ctx, '#4e341c', 16, 26, 2, 11);
   rect(ctx, '#6b4a2a', 13, 35, 6, 2);
@@ -962,6 +978,7 @@ function drawTree(ctx, v) {
   }
   addOutline(ctx.canvas);
   if (v === 2) for (let y = 6; y < 30; y += 5) rect(ctx, '#3a8a50', 16 - Math.floor(y / 4), y, 3, 1);
+  drawTreeDeco(ctx, deco);
   ctx.globalCompositeOperation = 'destination-over';
   rect(ctx, 'rgba(0,0,0,0.25)', 8, 36, 16, 3);
   rect(ctx, 'rgba(0,0,0,0.25)', 10, 35, 12, 5);
@@ -1059,6 +1076,120 @@ function drawBikeLight(ctx, f) {
     rect(ctx, lit ? on : off, 6, y, 4, 6);
     if (lit) rect(ctx, WHITE, 6, y + 1, 1, 1);
   }
+}
+
+/**
+ * Tree decorations: 'bag' is a Humiditree watering bag (Münsterhack 2019) around the trunk,
+ * 'nestbox' a Nestflix smart nest box (Münsterhack 2025) with its red recording light.
+ */
+function drawTreeDeco(ctx, deco) {
+  if (deco === 'bag') {
+    rect(ctx, BLACK, 10, 29, 12, 8);
+    rect(ctx, '#2e8b3a', 11, 30, 10, 6);
+    rect(ctx, '#1f6a2a', 11, 32, 10, 1);
+    rect(ctx, '#4fb85a', 12, 30, 3, 1);
+    rect(ctx, WHITE, 18, 33, 2, 2);
+  } else if (deco === 'nestbox') {
+    rect(ctx, BLACK, 11, 21, 10, 12);
+    rect(ctx, '#8a5a2a', 12, 24, 8, 8);
+    rect(ctx, '#5a3a1a', 11, 22, 10, 2);
+    rect(ctx, BLACK, 15, 26, 2, 2);
+    rect(ctx, RED, 18, 25, 1, 1);
+  }
+}
+
+/** Hack(a)Tonne (Münsterhack 2018): floating water-quality probe with antenna and blinking LED, 16x16. */
+function drawBuoy(ctx, f) {
+  ctx.translate(0, f % 2);
+  rect(ctx, YELLOW, 4, 6, 8, 7);
+  rect(ctx, YELLOW, 5, 5, 6, 1);
+  rect(ctx, '#555', 7, 1, 1, 4);
+  addOutline(ctx.canvas);
+  rect(ctx, RED, 4, 9, 8, 2);
+  rect(ctx, '#fff6b0', 5, 6, 2, 2);
+  rect(ctx, f < 2 ? '#3cf06a' : '#2a5a34', 6, 0, 3, 2);
+  rect(ctx, '#d4ecff', 2, 13, 12, 1);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/** Givebox / Kiepenkiste (Münsterhack 2022 / 2025): little wooden sharing cabinet with books and cups, 16x32. */
+function drawGivebox(ctx) {
+  rect(ctx, '#8a5a2a', 2, 8, 12, 22);
+  rect(ctx, '#5a3a1a', 1, 6, 14, 2);
+  rect(ctx, '#5a3a1a', 3, 4, 10, 2);
+  rect(ctx, '#5a3a1a', 5, 2, 6, 2);
+  rect(ctx, '#5a3a1a', 3, 30, 2, 2);
+  rect(ctx, '#5a3a1a', 11, 30, 2, 2);
+  addOutline(ctx.canvas);
+  rect(ctx, '#3a2616', 3, 10, 10, 18);
+  rect(ctx, '#8a5a2a', 3, 16, 10, 1);
+  rect(ctx, '#8a5a2a', 3, 22, 10, 1);
+  rect(ctx, RED, 4, 12, 2, 4);
+  rect(ctx, YELLOW, 6, 13, 1, 3);
+  rect(ctx, NAVY, 7, 12, 2, 4);
+  rect(ctx, WHITE, 10, 14, 2, 2);
+  rect(ctx, '#3a9a3a', 4, 18, 3, 4);
+  rect(ctx, WHITE, 8, 19, 2, 3);
+  rect(ctx, RED, 11, 20, 1, 2);
+  rect(ctx, YELLOW, 5, 24, 4, 3);
+  // Heart on the gable
+  rect(ctx, RED, 6, 4, 1, 1);
+  rect(ctx, RED, 9, 4, 1, 1);
+  rect(ctx, RED, 6, 5, 4, 1);
+  rect(ctx, RED, 7, 6, 2, 1);
+}
+
+/** Leihleeze (Münsterhack 2017) sign for the bike lending at the rack, 44x26. */
+function drawLeihleezeSign(ctx) {
+  rect(ctx, '#555', 21, 12, 2, 14);
+  rect(ctx, '#2e8b3a', 1, 1, 42, 11);
+  addOutline(ctx.canvas);
+  rect(ctx, WHITE, 2, 2, 40, 1);
+  rect(ctx, WHITE, 2, 10, 40, 1);
+  pixelText(ctx, 'LEIHLEEZE', 22 - Math.floor(pixelTextWidth('LEIHLEEZE') / 2), 4, WHITE);
+}
+
+/** Kraut und Rüben (Münsterhack 2019) chalkboard at the Wochenmarkt, 28x28. */
+function drawChalkboard(ctx) {
+  rect(ctx, '#8a5a2a', 4, 22, 2, 6);
+  rect(ctx, '#8a5a2a', 22, 22, 2, 6);
+  rect(ctx, '#8a5a2a', 1, 1, 26, 21);
+  addOutline(ctx.canvas);
+  rect(ctx, '#2a4a3a', 2, 2, 24, 19);
+  for (const [word, y] of [['KRAUT', 4], ['UND', 10], ['RÜBEN', 16]]) {
+    pixelText(ctx, word, 14 - Math.ceil(pixelTextWidth(word) / 2), y, '#f0f0e8');
+  }
+}
+
+/** Corndex noise levels the kiosk display cycles through; the beer price rises by 30 ct per level. */
+const KIOSK_LEVELS = [0, 1, 2, 3, 4, 3, 2, 1];
+
+/** Kiosk (Büdchen) at the Aasee with a Corndex display (Münsterhack 2024): louder means pricier beer, 48x48. */
+function drawKiosk(ctx, f) {
+  const level = KIOSK_LEVELS[f];
+  rect(ctx, '#e8e2d0', 2, 14, 44, 34);
+  rect(ctx, '#3a6ea8', 0, 6, 48, 8);
+  addOutline(ctx.canvas);
+  pixelText(ctx, 'KIOSK', 24 - Math.ceil(pixelTextWidth('KIOSK') / 2), 8, WHITE);
+  // Serving hatch with bottles on the shelf and a counter
+  rect(ctx, BLACK, 5, 18, 22, 15);
+  rect(ctx, '#5a4a3a', 6, 19, 20, 13);
+  for (let i = 0; i < 6; i++) rect(ctx, ['#3a7a2a', '#8a5a2a', YELLOW][i % 3], 8 + i * 3, 22, 2, 5);
+  rect(ctx, '#b8844a', 4, 32, 24, 2);
+  // Door
+  rect(ctx, BLACK, 33, 29, 10, 19);
+  rect(ctx, '#6a4a2a', 34, 30, 8, 18);
+  rect(ctx, YELLOW, 40, 39, 1, 1);
+  // Corndex display: current beer price and the noise meter driving it
+  rect(ctx, BLACK, 30, 15, 16, 12);
+  const price = (1.5 + level * 0.3).toFixed(2);
+  pixelText(ctx, price, 38 - Math.ceil(pixelTextWidth(price) / 2), 16, YELLOW);
+  const meter = ['#3cf06a', '#9cf03a', '#f0e03a', '#f0a03a', '#ff3a3a'];
+  for (let i = 0; i < 5; i++) rect(ctx, i <= level ? meter[i] : '#333', 32 + i * 3, 23, 2, 2);
+  // Beer crate by the wall
+  rect(ctx, BLACK, 5, 40, 10, 8);
+  rect(ctx, '#c49a5a', 6, 41, 8, 6);
+  for (let i = 0; i < 4; i++) rect(ctx, '#3a7a2a', 6 + i * 2, 39, 1, 2);
 }
 
 /** Wooden bench, 32x16. */
@@ -1331,6 +1462,8 @@ export const ANIMATED_OBJECTS = {
   boat: { frames: WATER_FRAMES, ms: 350 },
   leezenflow: { frames: SIGNAL_FRAMES, ms: 1000 },
   bikelight: { frames: SIGNAL_FRAMES, ms: 1000 },
+  buoy: { frames: WATER_FRAMES, ms: 350 },
+  kiosk: { frames: KIOSK_LEVELS.length, ms: 700 },
 };
 
 /**
@@ -1341,7 +1474,7 @@ export const ANIMATED_OBJECTS = {
  */
 export function getObjectSprite(obj, frame = 0) {
   const v = obj.v ?? 0;
-  const key = `${obj.type}|${obj.w}|${v}|${frame}`;
+  const key = [obj.type, obj.w, v, frame, obj.deco ?? ''].join('|');
   let canvas = objectCache.get(key);
   if (canvas) return canvas;
   const sizes = {
@@ -1349,6 +1482,7 @@ export function getObjectSprite(obj, frame = 0) {
     bench: [32, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
     bush: [16, 16], flowers: [32, 16], boat: [16, 16], rack: [obj.w * TILE, 16], leezenflow: [16, 40], bikelight: [16, 40],
+    buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1358,7 +1492,7 @@ export function getObjectSprite(obj, frame = 0) {
     case 'church': drawChurch(ctx); break;
     case 'dom': drawDom(ctx); break;
     case 'stand': drawStand(ctx); break;
-    case 'tree': drawTree(ctx, v); break;
+    case 'tree': drawTree(ctx, v, obj.deco); break;
     case 'bench': drawBench(ctx); break;
     case 'lamp': drawLamp(ctx); break;
     case 'bikes': drawBikes(ctx, obj.w, v); break;
@@ -1375,6 +1509,11 @@ export function getObjectSprite(obj, frame = 0) {
     case 'rack': drawRack(ctx, obj.w); break;
     case 'leezenflow': drawLeezenflow(ctx, frame); break;
     case 'bikelight': drawBikeLight(ctx, frame); break;
+    case 'buoy': drawBuoy(ctx, frame); break;
+    case 'givebox': drawGivebox(ctx); break;
+    case 'leihleeze': drawLeihleezeSign(ctx); break;
+    case 'chalkboard': drawChalkboard(ctx); break;
+    case 'kiosk': drawKiosk(ctx, frame); break;
   }
   objectCache.set(key, canvas);
   return canvas;

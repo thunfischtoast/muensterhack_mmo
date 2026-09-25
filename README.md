@@ -35,6 +35,20 @@ Chat messages appear above the character for 5 seconds. Riding a bike is about t
 
 A gust of wind knocked over 6 Leezen on the plaza (marked with a yellow "!"). Pick one up ("Aufheben" / E), ride it to the empty bike rack below the plaza (free slots glow, an arrow points the way) and park it ("Einparken"). Getting off elsewhere drops the bike where you stand. When all 6 are parked, everyone gets a celebration and a new round starts 60 seconds later. The state lives in server memory and resets on restart.
 
+## Easter eggs: earlier Münsterhack projects
+
+Small nods to projects from [codeformuenster/muensterhack](https://github.com/codeformuenster/muensterhack):
+
+- **Leihleeze** (2017): green sign at the bike rack on the plaza
+- **Hack(a)Tonne** (2018): water-quality probe floating in the Aasee
+- **Kraut und Rüben** (2019) / **MüMa** (2024): chalkboard at the Wochenmarkt stalls
+- **Grüne Welle / Leezenflow** (2019): LED countdown for the bike traffic light on the Promenade
+- **Humiditree** (2019): watering bags around park trees
+- **Givebox Network** (2022) / **Kiepenkiste** (2025): sharing cabinet next to the Kiepenkerl
+- **1648_reloaded** (2023): "1648" cartouche on the Historic Town Hall
+- **Corndex** (2024): kiosk at the Aasee whose beer price rises with the noise meter
+- **Nestflix** (2025): nest box with a recording light on a Promenade tree
+
 ## Configuration
 
 - `PORT`: HTTP and WebSocket port (default `3000`).
