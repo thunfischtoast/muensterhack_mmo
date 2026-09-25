@@ -76,6 +76,8 @@ export const OBJECTS = [
   { type: 'stall', x: 1, y: 7, w: 3, h: 1, v: 0 },
   { type: 'stall', x: 5, y: 7, w: 3, h: 1, v: 1 },
   { type: 'stall', x: 19, y: 7, w: 3, h: 1, v: 2 },
+  // Empty bike rack for the Leezen-Chaos mini-game
+  { type: 'rack', x: 5, y: 15, w: 6, h: 1 },
   // Leezen (bicycles), in racks and parked loosely
   { type: 'bikes', x: 2, y: 13, w: 5, h: 1, v: 0 },
   { type: 'bikes', x: 23, y: 14, w: 4, h: 1, v: 2 },
@@ -165,6 +167,13 @@ for (const b of BIRDS) {
     }
   }
 }
+
+/** Leezen-Chaos rack slots: tile centers in pixels, one per rack tile. */
+const rack = OBJECTS.find((o) => o.type === 'rack');
+export const RACK_SLOTS = Array.from({ length: rack.w }, (_, i) => ({
+  x: (rack.x + i) * TILE + TILE / 2,
+  y: rack.y * TILE + TILE / 2,
+}));
 
 const solid = new Uint8Array(MAP_W * MAP_H);
 for (let y = 0; y < MAP_H; y++) {

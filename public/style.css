@@ -223,6 +223,11 @@ input:focus {
 
 .hint-touch { display: none; }
 
+.hint-game {
+  margin-top: 8px;
+  color: var(--black);
+}
+
 @media (hover: none) and (pointer: coarse) {
   .hint-touch { display: block; }
   .hint-desktop { display: none; }
@@ -240,6 +245,35 @@ input:focus {
   background: var(--black);
   color: var(--yellow);
   font-size: 14px;
+}
+
+#task {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: var(--white);
+  font-size: 13px;
+  box-shadow: inset 0 0 0 2px var(--black);
+}
+
+.task-title {
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 160px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 8px 14px;
+  background: var(--yellow);
+  color: var(--black);
+  font-size: 15px;
+  text-align: center;
+  box-shadow: inset 0 0 0 3px var(--black), 4px 4px 0 var(--black);
+  pointer-events: none;
 }
 
 #notice {

@@ -11,7 +11,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { TILE, WORLD_W, WORLD_H, SPAWN, LOOK_COUNT, BIKE_COLOR_COUNT, isSolid } from './public/map.js';
+import {
+  TILE, WORLD_W, WORLD_H, GROUND, SPAWN, LOOK_COUNT, BIKE_COLOR_COUNT, RACK_SLOTS, isSolid,
+} from './public/map.js';
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const CONTENT_TYPES = {
@@ -30,6 +32,8 @@ const MAX_CHAT = 120;
 const CHAT_COOLDOWN_MS = 500;
 const WAVE_COOLDOWN_MS = 1000;
 const HIGH_FIVE_RANGE = 20; // pixels between feet for a wave to become a high five
+const LEEZEN_REACH = 32; // pixels; a bit more generous than the client's button range to absorb latency
+const LEEZEN_RESET_MS = 60000;
 const TICK_MS = 100;
 const HEARTBEAT_MS = 30000;
 const MAX_PAYLOAD = 1024;
@@ -121,6 +125,45 @@ export function startServer(port = 3000) {
   let nextId = 1;
   let dirty = false;
 
+  // Leezen-Chaos: loose bikes on the plaza that players carry into the rack slots.
+  const leezen = { round: 0, slots: [], loose: [], clearedAt: 0 };
+  let nextBikeId = 1;
+  let resetTimer = null;
+
+  /** Start a new round: empty rack, one knocked-over bike per slot on random free plaza tiles. */
+  function scatterLeezen() {
+    const tiles = [];
+    for (let ty = 6; ty < 15; ty++) {
+      for (let tx = 0; tx < GROUND[ty].length; tx++) if (GROUND[ty][tx] === 'c' && !isSolid(tx, ty)) tiles.push([tx, ty]);
+    }
+    leezen.round++;
+    leezen.slots = RACK_SLOTS.map(() => null);
+    leezen.loose = RACK_SLOTS.map(() => {
+      const [tx, ty] = tiles.splice(Math.floor(Math.random() * tiles.length), 1)[0];
+      const color = Math.floor(Math.random() * BIKE_COLOR_COUNT);
+      return { id: nextBikeId++, x: tx * TILE + TILE / 2, y: ty * TILE + 12, color, carriedBy: null };
+    });
+    leezen.clearedAt = 0;
+  }
+
+  /** Game state as sent to clients; resetIn avoids depending on synchronized clocks. */
+  function leezenState() {
+    const resetIn = leezen.clearedAt ? Math.max(0, leezen.clearedAt + LEEZEN_RESET_MS - Date.now()) : 0;
+    return { round: leezen.round, slots: leezen.slots, loose: leezen.loose, cleared: leezen.clearedAt > 0, resetIn };
+  }
+
+  /** Put a carried bike back on the ground where its carrier stands. */
+  function dropBike(p) {
+    const bike = leezen.loose.find((b) => b.carriedBy === p.id);
+    if (!bike) return false;
+    bike.carriedBy = null;
+    bike.x = p.x;
+    bike.y = p.y;
+    return true;
+  }
+
+  scatterLeezen();
+
   /** Send a message to all joined players, optionally skipping one socket. */
   function broadcast(msg, except) {
     const data = JSON.stringify(msg);
@@ -170,7 +213,9 @@ export function startServer(port = 3000) {
         };
         ws.player = player;
         players.set(player.id, player);
-        ws.send(JSON.stringify({ t: 'welcome', id: player.id, players: [...players.values()].map(publicPlayer) }));
+        ws.send(JSON.stringify({
+          t: 'welcome', id: player.id, players: [...players.values()].map(publicPlayer), leezen: leezenState(),
+        }));
         broadcast({ t: 'join', player: publicPlayer(player) }, ws);
         return;
       }
@@ -204,6 +249,28 @@ export function startServer(port = 3000) {
           }
         }
         broadcast({ t: 'wave', id: p.id, with: partner ? partner.id : null });
+      } else if (msg.t === 'pickup') {
+        const bike = leezen.loose.find((b) => b.id === msg.id);
+        const carrying = leezen.loose.some((b) => b.carriedBy === p.id);
+        if (!bike || bike.carriedBy !== null || carrying || Math.hypot(bike.x - p.x, bike.y - p.y) > LEEZEN_REACH) return;
+        bike.carriedBy = p.id;
+        broadcast({ t: 'leezen', ...leezenState() });
+      } else if (msg.t === 'park') {
+        const bike = leezen.loose.find((b) => b.carriedBy === p.id);
+        const slot = Number.isInteger(msg.slot) ? RACK_SLOTS[msg.slot] : undefined;
+        if (!bike || !slot || leezen.slots[msg.slot] !== null || Math.hypot(slot.x - p.x, slot.y - p.y) > LEEZEN_REACH) return;
+        leezen.slots[msg.slot] = bike.color;
+        leezen.loose = leezen.loose.filter((b) => b !== bike);
+        if (leezen.slots.every((c) => c !== null)) {
+          leezen.clearedAt = Date.now();
+          resetTimer = setTimeout(() => {
+            scatterLeezen();
+            broadcast({ t: 'leezen', ...leezenState() });
+          }, LEEZEN_RESET_MS);
+        }
+        broadcast({ t: 'leezen', ...leezenState() });
+      } else if (msg.t === 'drop') {
+        if (dropBike(p)) broadcast({ t: 'leezen', ...leezenState() });
       }
     });
 
@@ -211,6 +278,7 @@ export function startServer(port = 3000) {
       if (!ws.player) return;
       players.delete(ws.player.id);
       broadcast({ t: 'leave', id: ws.player.id });
+      if (dropBike(ws.player)) broadcast({ t: 'leezen', ...leezenState() });
     });
   });
 
@@ -237,6 +305,7 @@ export function startServer(port = 3000) {
   function close() {
     clearInterval(tick);
     clearInterval(heartbeat);
+    clearTimeout(resetTimer);
     for (const ws of wss.clients) ws.terminate();
     return new Promise((resolve) => wss.close(() => server.close(() => resolve())));
   }

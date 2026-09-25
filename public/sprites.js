@@ -1254,6 +1254,45 @@ export function getBirdSprite(kind, frame) {
   return canvas;
 }
 
+/** Empty bike rack: one bent-steel stand per slot, yellow ground marking, 16 px per slot. */
+function drawRack(ctx, count) {
+  rect(ctx, '#e0c020', 0, 14, count * TILE, 1);
+  for (let i = 0; i < count; i++) {
+    const x = i * TILE;
+    rect(ctx, '#8a8a8a', x + 3, 6, 1, 10);
+    rect(ctx, '#8a8a8a', x + 12, 6, 1, 10);
+    rect(ctx, '#8a8a8a', x + 4, 5, 8, 1);
+    rect(ctx, '#bdbdbd', x + 4, 5, 3, 1);
+  }
+  addOutline(ctx.canvas);
+}
+
+const looseBikeCache = new Map();
+
+/**
+ * Leezen-Chaos bike in a color: standing in a rack slot, or knocked over (flattened) on the ground.
+ * @param {number} color bike color index
+ * @param {boolean} lying knocked over
+ */
+export function getLooseBikeSprite(color, lying) {
+  const key = `${color}|${lying}`;
+  let canvas = looseBikeCache.get(key);
+  if (canvas) return canvas;
+  const [upright, uctx] = makeCanvas(TILE, TILE);
+  drawBike(uctx, 0, BIKE_COLORS[color % BIKE_COLORS.length]);
+  if (lying) {
+    let ctx;
+    [canvas, ctx] = makeCanvas(TILE, 9);
+    ctx.imageSmoothingEnabled = false;
+    rect(ctx, 'rgba(0,0,0,0.25)', 1, 5, 14, 3);
+    ctx.drawImage(upright, 0, 4, TILE, 12, 0, 1, TILE, 7);
+  } else {
+    canvas = upright;
+  }
+  looseBikeCache.set(key, canvas);
+  return canvas;
+}
+
 /** Draw a shaded ball with outline. */
 function drawBall(ctx, cx, cy, r) {
   for (let y = -r - 1; y <= r + 1; y++) {
@@ -1309,7 +1348,7 @@ export function getObjectSprite(obj, frame = 0) {
     house: [64, 80], tower: [48, 128], church: [96, 96], dom: [96, 32], stand: [48, 40], tree: [32, 40],
     bench: [32, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
-    bush: [16, 16], flowers: [32, 16], boat: [16, 16], leezenflow: [16, 40], bikelight: [16, 40],
+    bush: [16, 16], flowers: [32, 16], boat: [16, 16], rack: [obj.w * TILE, 16], leezenflow: [16, 40], bikelight: [16, 40],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1333,6 +1372,7 @@ export function getObjectSprite(obj, frame = 0) {
     case 'bush': drawBush(ctx); break;
     case 'flowers': drawFlowers(ctx); break;
     case 'boat': drawBoat(ctx, v, frame); break;
+    case 'rack': drawRack(ctx, obj.w); break;
     case 'leezenflow': drawLeezenflow(ctx, frame); break;
     case 'bikelight': drawBikeLight(ctx, frame); break;
   }

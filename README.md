@@ -31,6 +31,10 @@ Tests: `npm test`.
 
 Chat messages appear above the character for 5 seconds. Riding a bike is about twice as fast as walking; the parked bike stays where it is. Players pick one of 15 looks on the login screen. Ducks and a swan swim on the Aasee (driven by the wall clock, so everyone sees roughly the same).
 
+## Mini-game: Leezen-Chaos
+
+A gust of wind knocked over 6 Leezen on the plaza (marked with a yellow "!"). Pick one up ("Aufheben" / E), ride it to the empty bike rack below the plaza (free slots glow, an arrow points the way) and park it ("Einparken"). Getting off elsewhere drops the bike where you stand. When all 6 are parked, everyone gets a celebration and a new round starts 60 seconds later. The state lives in server memory and resets on restart.
+
 ## Configuration
 
 - `PORT`: HTTP and WebSocket port (default `3000`).

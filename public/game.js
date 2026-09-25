@@ -3,10 +3,10 @@
  * networking, local movement with tile collision, camera and canvas rendering.
  */
 import {
-  TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, birdAt, isSolid,
+  TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, RACK_SLOTS, birdAt, isSolid,
 } from './map.js';
 import {
-  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite,
+  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite,
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
 } from './sprites.js';
 import { findPath } from './path.js';
@@ -20,6 +20,7 @@ const BUBBLE_FADE_MS = 500;
 const WAVE_MS = 1200;
 const SPARK_MS = 400;
 const MAX_PARTICLES = 200;
+const TOAST_MS = 3500;
 /** Dust colors per ground type (see GROUND in map.js). */
 const DUST_COLORS = {
   c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], t: ['#b5ad9e', '#e4ded2'], j: ['#7a5230', '#a0703f'],
@@ -49,6 +50,8 @@ const chatInput = document.getElementById('chat-input');
 const chatButton = document.getElementById('chat-button');
 const bikeButton = document.getElementById('bike-button');
 const waveButton = document.getElementById('wave-button');
+const taskStatusEl = document.getElementById('task-status');
+const toastEl = document.getElementById('toast');
 const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
@@ -84,6 +87,11 @@ let scale = 3;
 let dpr = 1;
 let version = null; // server build seen on the first connect; a different one means we are outdated
 let bikeButtonText = '';
+let leezen = null; // Leezen-Chaos state from the server
+let leezenAt = 0; // when it arrived, to count down resetIn locally
+let myCarry = null; // id of the loose bike the own player carries
+let taskText = '';
+let toastTimer = 0;
 
 // ---------------------------------------------------------------------------
 // Networking
@@ -163,6 +171,7 @@ function handleMessage(msg) {
         me.dir = previous.dir;
         me.bike = previous.bike;
       }
+      applyLeezen(msg.leezen, true);
       lastSent = '';
       loginEl.hidden = true;
       noticeEl.hidden = true;
@@ -173,6 +182,9 @@ function handleMessage(msg) {
     }
     case 'join':
       addPlayer(msg.player);
+      break;
+    case 'leezen':
+      applyLeezen(msg, false);
       break;
     case 'leave':
       players.delete(msg.id);
@@ -318,36 +330,117 @@ bikeButton.addEventListener('click', () => {
   bikeButton.blur(); // otherwise Space/Enter would keep triggering the focused button
 });
 
-/** Nearest bike within reach of the local player's feet, or null. */
-function nearestBike(me) {
+/** Nearest item (with x/y in pixels) within `reach` of the local player's feet, or null. */
+function nearest(items, me, reach) {
   let best = null;
-  let bestDist = BIKE_REACH;
-  for (const b of BIKES) {
-    const d = Math.hypot(b.x - me.x, b.y - me.y);
+  let bestDist = reach;
+  for (const item of items) {
+    const d = Math.hypot(item.x - me.x, item.y - me.y);
     if (d <= bestDist) {
-      best = b;
+      best = item;
       bestDist = d;
     }
   }
   return best;
 }
 
-/** Get on the nearest bike, or off the current one. The bike in the world stays where it is. */
+/** Leezen-Chaos rack slots that are still empty, with their index. */
+function freeSlots() {
+  return leezen ? RACK_SLOTS.map((slot, i) => ({ ...slot, i })).filter((slot) => leezen.slots[slot.i] === null) : [];
+}
+
+/** Knocked-over bikes nobody carries right now. */
+function lyingBikes() {
+  return leezen ? leezen.loose.filter((b) => b.carriedBy === null) : [];
+}
+
+/**
+ * What the bike button and E do right now, by priority: park or drop a carried Leeze,
+ * get off the own bike, pick up a knocked-over Leeze, get on a parked bike.
+ */
+function bikeAction(me) {
+  if (myCarry !== null) {
+    const slot = nearest(freeSlots(), me, BIKE_REACH);
+    return slot
+      ? { label: 'Einparken', run: () => send({ t: 'park', slot: slot.i }) }
+      : { label: 'Absteigen', run: () => send({ t: 'drop' }) };
+  }
+  if (me.bike !== null) return { label: 'Absteigen', run: () => { me.bike = null; } };
+  const loose = nearest(lyingBikes(), me, BIKE_REACH);
+  if (loose) return { label: 'Aufheben', run: () => send({ t: 'pickup', id: loose.id }) };
+  const bike = nearest(BIKES, me, BIKE_REACH);
+  if (bike) return { label: 'Aufsteigen', run: () => { me.bike = bike.color; } };
+  return null;
+}
+
+/** Run the current bike action (button or E). Parked bikes stay where they are when you ride them. */
 function toggleBike() {
   const me = players.get(myId);
-  if (!me) return;
-  if (me.bike !== null) {
-    me.bike = null;
-  } else {
-    const bike = nearestBike(me);
-    if (bike) me.bike = bike.color;
+  const action = me && bikeAction(me);
+  if (action) action.run();
+}
+
+/** Take over the Leezen-Chaos state from the server and tell the player what changed. */
+function applyLeezen(state, initial) {
+  const prev = leezen;
+  leezen = state;
+  leezenAt = performance.now();
+  const me = players.get(myId);
+  const carried = state.loose.find((b) => b.carriedBy === myId);
+  if (carried && myCarry !== carried.id) {
+    if (me) me.bike = carried.color;
+    showToast('Bring die Leeze zum Fahrradständer!');
+  } else if (!carried && myCarry !== null) {
+    // Parked or dropped: the carried bike is gone, so the own player walks again
+    if (me) me.bike = null;
+    const count = (slots) => slots.filter((c) => c !== null).length;
+    const left = state.slots.length - count(state.slots);
+    if (prev && count(state.slots) > count(prev.slots) && left > 0) {
+      showToast(`Geparkt! Noch ${left} ${left === 1 ? 'Leeze' : 'Leezen'}.`);
+    }
+  }
+  myCarry = carried ? carried.id : null;
+  if (initial || !prev) return;
+  if (state.round > prev.round) showToast('Windböe! Die Leezen sind umgefallen.');
+  else if (state.cleared && !prev.cleared) celebrate();
+}
+
+/** Round complete: banner for everyone and confetti over the rack. */
+function celebrate() {
+  showToast('Münster ist aufgeräumt! Danke!', 6000);
+  const cx = (RACK_SLOTS[0].x + RACK_SLOTS[RACK_SLOTS.length - 1].x) / 2;
+  const colors = ['#DA121A', '#FCDD09', '#FFFFFF'];
+  for (let i = 0; i < 90; i++) {
+    const vx = (Math.random() - 0.5) * 90;
+    const vy = -40 - Math.random() * 70;
+    emit(cx + (Math.random() - 0.5) * 60, RACK_SLOTS[0].y - 8, vx, vy, 1.5 + Math.random(), colors[i % 3], 2, 90);
   }
 }
 
-/** Add a fading pixel particle; the oldest one is dropped when the cap is reached. */
-function emit(x, y, vx, vy, life, color, size = 1) {
+/** Show a short hint at the bottom of the screen. */
+function showToast(text, ms = TOAST_MS) {
+  toastEl.textContent = text;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+}
+
+/** Task panel: progress, or the countdown to the next round; touch the DOM only on changes. */
+function updateTask() {
+  if (!leezen) return;
+  const parked = leezen.slots.filter((c) => c !== null).length;
+  const text = leezen.cleared
+    ? `Aufgeräumt! Neue Runde in ${Math.max(0, Math.ceil((leezen.resetIn - (performance.now() - leezenAt)) / 1000))} s`
+    : `${parked}/${leezen.slots.length} im Ständer`;
+  if (text === taskText) return;
+  taskText = text;
+  taskStatusEl.textContent = text;
+}
+
+/** Add a fading pixel particle (optionally falling with gravity g); the oldest is dropped at the cap. */
+function emit(x, y, vx, vy, life, color, size = 1, g = 0) {
   if (particles.length >= MAX_PARTICLES) particles.shift();
-  particles.push({ x, y, vx, vy, life, max: life, color, size });
+  particles.push({ x, y, vx, vy, life, max: life, color, size, g });
 }
 
 /** Move birds, emit dust behind moving players and wakes behind birds, age particles. */
@@ -374,6 +467,7 @@ function updateEffects(dt) {
     emit(p.x + ox + (Math.random() - 0.5) * 4, p.y - 1 + oy, ox * 1.5, -3 - Math.random() * 5, riding ? 0.5 : 0.4, color, 2);
   }
   for (const q of particles) {
+    q.vy += q.g * dt;
     q.x += q.vx * dt;
     q.y += q.vy * dt;
     q.life -= dt;
@@ -381,9 +475,9 @@ function updateEffects(dt) {
   particles = particles.filter((q) => q.life > 0);
 }
 
-/** Show "Aufsteigen" near a bike and "Absteigen" while riding; touch the DOM only on changes. */
+/** Label the bike button with the current bike action, hide it when there is none; touch the DOM only on changes. */
 function updateBikeButton(me) {
-  const text = me.bike !== null ? 'Absteigen' : nearestBike(me) ? 'Aufsteigen' : '';
+  const text = bikeAction(me)?.label ?? '';
   if (text === bikeButtonText) return;
   bikeButtonText = text;
   bikeButton.textContent = text;
@@ -485,6 +579,7 @@ function update(dt, now) {
   if (me.moving) me.dir = dirFor(vx, vy);
   me.walkTime = me.moving ? me.walkTime + dt : 0;
   updateBikeButton(me);
+  updateTask();
 
   for (const p of players.values()) {
     if (p.id === myId) continue;
@@ -608,6 +703,50 @@ function drawBird(b, now) {
   } else {
     ctx.drawImage(sprite, x - Math.floor(sprite.width / 2), y);
   }
+}
+
+/**
+ * Leezen-Chaos guidance on top of the world: a bobbing "!" over every knocked-over bike and,
+ * while carrying one, pulsing free rack slots plus an arrow at the own player pointing to the nearest.
+ */
+function drawLeezenHints(now) {
+  const bob = Math.round(Math.sin(now / 200) * 1.5);
+  for (const b of lyingBikes()) {
+    const x = Math.round(b.x);
+    const y = Math.round(b.y) - 20 + bob;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 2, y - 1, 4, 11);
+    ctx.fillStyle = '#FCDD09';
+    ctx.fillRect(x - 1, y, 2, 6);
+    ctx.fillRect(x - 1, y + 7, 2, 2);
+  }
+  const me = players.get(myId);
+  if (myCarry === null || !me) return;
+  const slots = freeSlots();
+  ctx.globalAlpha = 0.55 + 0.45 * Math.sin(now / 150);
+  ctx.fillStyle = '#FCDD09';
+  for (const sl of slots) {
+    ctx.fillRect(sl.x - 8, sl.y - 8, 16, 1);
+    ctx.fillRect(sl.x - 8, sl.y + 7, 16, 1);
+    ctx.fillRect(sl.x - 8, sl.y - 8, 1, 16);
+    ctx.fillRect(sl.x + 7, sl.y - 8, 1, 16);
+  }
+  ctx.globalAlpha = 1;
+  const target = nearest(slots, me, Infinity);
+  if (!target || Math.hypot(target.x - me.x, target.y - me.y) < 40) return;
+  const a = Math.atan2(target.y - me.y, target.x - me.x);
+  const cx = me.x + Math.cos(a) * 16;
+  const cy = me.y - 8 + Math.sin(a) * 16;
+  const tri = (size, color) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * size, cy + Math.sin(a) * size);
+    ctx.lineTo(cx + Math.cos(a + 2.4) * size, cy + Math.sin(a + 2.4) * size);
+    ctx.lineTo(cx + Math.cos(a - 2.4) * size, cy + Math.sin(a - 2.4) * size);
+    ctx.fill();
+  };
+  tri(6, '#000');
+  tri(4, '#FCDD09');
 }
 
 /** High-five clap: yellow pixel rays bursting outward. */
@@ -737,10 +876,20 @@ function render(now) {
     ...objectEntries,
     ...sortedPlayers.map((p) => ({ sortY: p.y, player: p })),
     ...birds.map((b) => ({ sortY: b.y, bird: b })),
+    ...lyingBikes().map((b) => ({ sortY: b.y, lying: b })),
+    // Parked Leezen stand in front of the rack stands, so they sort just after the rack.
+    ...RACK_SLOTS.map((slot, i) => ({ slot, color: leezen ? leezen.slots[i] : null }))
+      .filter((e) => e.color !== null)
+      .map((e) => ({ sortY: e.slot.y + TILE / 2 + 0.5, parked: e })),
   ].sort((a, b) => a.sortY - b.sortY);
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
     else if (item.bird) drawBird(item.bird, now);
+    else if (item.lying) {
+      ctx.drawImage(getLooseBikeSprite(item.lying.color, true), Math.round(item.lying.x) - 8, Math.round(item.lying.y) - 7);
+    } else if (item.parked) {
+      ctx.drawImage(getLooseBikeSprite(item.parked.color, false), item.parked.slot.x - 8, item.parked.slot.y - 8);
+    }
     else ctx.drawImage(item.sprites[item.anim ? Math.floor(Date.now() / item.anim.ms) % item.anim.frames : 0], item.x, item.y);
   }
   // Particles on top: they are tiny and short-lived, and under the sprites they would be hidden.
@@ -751,6 +900,7 @@ function render(now) {
   }
   ctx.globalAlpha = 1;
   drawSparks(now);
+  drawLeezenHints(now);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));

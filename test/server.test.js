@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import WebSocket from 'ws';
 import { startServer } from '../server.js';
+import { RACK_SLOTS } from '../public/map.js';
 
 /** Connect a client whose `next(pred)` resolves with the first (buffered or future) message matching `pred`. */
 function connect(port) {
@@ -82,6 +83,62 @@ test('join, move and chat are relayed between players', { timeout: 5000 }, async
     a.close();
     b.close();
     stale.close();
+    await server.close();
+  }
+});
+
+test('Leezen-Chaos: pick up only nearby, park, drop on disconnect, clear the round', { timeout: 5000 }, async () => {
+  const server = await startServer(0);
+  const a = await connect(server.port);
+  const b = await connect(server.port);
+  try {
+    const { version } = await a.next((m) => m.t === 'hello');
+    a.sendJson({ t: 'join', version, name: 'A' });
+    const { leezen } = await a.next((m) => m.t === 'welcome');
+    assert.equal(leezen.loose.length, RACK_SLOTS.length);
+    const [first, second, ...rest] = leezen.loose;
+    const moveTo = (ws, { x, y }) => ws.sendJson({ t: 'move', x, y, dir: 'down', moving: false });
+    const nextLeezen = () => a.next((m) => m.t === 'leezen');
+
+    // Far away from `second`: refused. Next to `first`: carried.
+    moveTo(a, { x: second.x + 100, y: second.y + 100 });
+    a.sendJson({ t: 'pickup', id: second.id });
+    moveTo(a, first);
+    a.sendJson({ t: 'pickup', id: first.id });
+    let state = await nextLeezen();
+    assert.equal(state.loose.find((l) => l.id === first.id).carriedBy !== null, true);
+    assert.equal(state.loose.find((l) => l.id === second.id).carriedBy, null);
+
+    moveTo(a, RACK_SLOTS[0]);
+    a.sendJson({ t: 'park', slot: 0 });
+    state = await nextLeezen();
+    assert.equal(state.slots[0], first.color);
+    assert.equal(state.loose.length, RACK_SLOTS.length - 1);
+
+    // A carrier who disconnects drops the bike where they stood.
+    const { version: vb } = await b.next((m) => m.t === 'hello');
+    b.sendJson({ t: 'join', version: vb, name: 'B' });
+    await b.next((m) => m.t === 'welcome');
+    moveTo(b, second);
+    b.sendJson({ t: 'pickup', id: second.id });
+    await nextLeezen();
+    b.close();
+    state = await nextLeezen();
+    assert.equal(state.loose.find((l) => l.id === second.id).carriedBy, null);
+
+    for (const [i, bike] of [second, ...rest].entries()) {
+      moveTo(a, bike);
+      a.sendJson({ t: 'pickup', id: bike.id });
+      await nextLeezen();
+      moveTo(a, RACK_SLOTS[i + 1]);
+      a.sendJson({ t: 'park', slot: i + 1 });
+      state = await nextLeezen();
+    }
+    assert.equal(state.cleared, true);
+    assert.equal(state.slots.every((c) => c !== null), true);
+  } finally {
+    a.close();
+    b.close();
     await server.close();
   }
 });
