@@ -2,9 +2,11 @@
  * Browser client: login, input (keyboard, click/tap-to-walk, chat), WebSocket
  * networking, local movement with tile collision, camera and canvas rendering.
  */
-import { TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, OBJECTS, SPAWN, BIKES, LOOK_COUNT, isSolid } from './map.js';
 import {
-  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite,
+  TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, birdAt, isSolid,
+} from './map.js';
+import {
+  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite,
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES,
 } from './sprites.js';
 import { findPath } from './path.js';
@@ -17,6 +19,13 @@ const BUBBLE_MS = 5000;
 const BUBBLE_FADE_MS = 500;
 const WAVE_MS = 1200;
 const SPARK_MS = 400;
+const MAX_PARTICLES = 200;
+/** Dust colors per ground type (see GROUND in map.js). */
+const DUST_COLORS = {
+  c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], s: ['#d9c88e', '#f0e4b8'], '.': ['#3f8a35', '#6cbf55'],
+};
+/** Offset from the feet to where dust kicks up behind a walker or the rear wheel of a rider. */
+const DUST_BEHIND = { right: [-5, 0], left: [5, 0], down: [0, -2], up: [0, 2] };
 const RECONNECT_MS = 2000;
 const FOOT_W = 5; // half width of the collision box around the feet
 const FOOT_H = 4; // height of the collision box above the feet
@@ -64,6 +73,8 @@ let path = [];
 let stuckTime = 0;
 let marker = null;
 let sparks = []; // high-five claps: world position and start time
+let particles = [];
+const birds = BIRDS.map((b) => ({ ...b, rippleIn: Math.random() }));
 let lastSent = '';
 let lastSendTime = 0;
 let scale = 3;
@@ -116,6 +127,7 @@ function addPlayer(p) {
     breathPhase: Math.random() * 1400,
     blinkAt: performance.now() + 1000 + Math.random() * 3000,
     waveUntil: 0,
+    dustIn: 0,
     bubble: null,
   });
 }
@@ -327,6 +339,43 @@ function toggleBike() {
     const bike = nearestBike(me);
     if (bike) me.bike = bike.color;
   }
+}
+
+/** Add a fading pixel particle; the oldest one is dropped when the cap is reached. */
+function emit(x, y, vx, vy, life, color, size = 1) {
+  if (particles.length >= MAX_PARTICLES) particles.shift();
+  particles.push({ x, y, vx, vy, life, max: life, color, size });
+}
+
+/** Move birds, emit dust behind moving players and wakes behind birds, age particles. */
+function updateEffects(dt) {
+  const t = Date.now() / 1000;
+  for (const b of birds) {
+    Object.assign(b, birdAt(b, t));
+    b.rippleIn -= dt;
+    if (b.rippleIn <= 0) {
+      b.rippleIn = 0.3;
+      const back = b.left ? 5 : -5;
+      for (const vy of [-5, 5]) emit(b.x + back, b.y - 1, back * 0.8, vy, 0.9, '#d8ecff');
+    }
+  }
+  for (const p of players.values()) {
+    if (p.walkTime <= 0) continue;
+    p.dustIn -= dt;
+    if (p.dustIn > 0) continue;
+    const riding = p.bike !== null;
+    p.dustIn = riding ? 0.05 : 0.15;
+    const colors = DUST_COLORS[GROUND[Math.floor(p.y / TILE)]?.[Math.floor(p.x / TILE)]] || DUST_COLORS.c;
+    const color = colors[Math.floor(Math.random() * 2)];
+    const [ox, oy] = DUST_BEHIND[p.dir];
+    emit(p.x + ox + (Math.random() - 0.5) * 4, p.y - 1 + oy, ox * 1.5, -3 - Math.random() * 5, riding ? 0.5 : 0.4, color, 2);
+  }
+  for (const q of particles) {
+    q.x += q.vx * dt;
+    q.y += q.vy * dt;
+    q.life -= dt;
+  }
+  particles = particles.filter((q) => q.life > 0);
 }
 
 /** Show "Aufsteigen" near a bike and "Absteigen" while riding; touch the DOM only on changes. */
@@ -542,6 +591,22 @@ function drawMarker(now) {
   }
 }
 
+/** Draw a bird with its waterline at (x, y), mirrored when swimming left. */
+function drawBird(b, now) {
+  const sprite = getBirdSprite(b.kind, Math.floor((now + b.phase * 1000) / 400) % 2);
+  const x = Math.round(b.x);
+  const y = Math.round(b.y) - sprite.height + 2;
+  if (b.left) {
+    ctx.save();
+    ctx.translate(x, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(sprite, -Math.floor(sprite.width / 2), y);
+    ctx.restore();
+  } else {
+    ctx.drawImage(sprite, x - Math.floor(sprite.width / 2), y);
+  }
+}
+
 /** High-five clap: yellow pixel rays bursting outward. */
 function drawSparks(now) {
   sparks = sparks.filter((s) => now - s.start < SPARK_MS);
@@ -667,11 +732,20 @@ function render(now) {
   const drawList = [
     ...objectEntries,
     ...sortedPlayers.map((p) => ({ sortY: p.y, player: p })),
+    ...birds.map((b) => ({ sortY: b.y, bird: b })),
   ].sort((a, b) => a.sortY - b.sortY);
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
+    else if (item.bird) drawBird(item.bird, now);
     else ctx.drawImage(item.sprite, item.x, item.y);
   }
+  // Particles on top: they are tiny and short-lived, and under the sprites they would be hidden.
+  for (const q of particles) {
+    ctx.globalAlpha = q.life / q.max;
+    ctx.fillStyle = q.color;
+    ctx.fillRect(Math.round(q.x), Math.round(q.y), q.size, q.size);
+  }
+  ctx.globalAlpha = 1;
   drawSparks(now);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -687,6 +761,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
   if (players.has(myId)) update(dt, now);
+  updateEffects(dt);
   render(now);
   if (!loginEl.hidden) drawLookPreview(now);
   requestAnimationFrame(loop);

@@ -4,7 +4,7 @@
  * Everything is drawn once at native resolution (16px tiles) into offscreen
  * canvases and cached; game.js scales them up with smoothing disabled.
  */
-import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, bikeColor } from './map.js';
+import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, LOOK_COUNT, bikeColor } from './map.js';
 
 const RED = '#DA121A';
 const YELLOW = '#FCDD09';
@@ -14,7 +14,8 @@ const NAVY = '#2C3E50';
 
 /**
  * Character outfits in the Münsterhack palette, inspired by the event mascots.
- * hairStyle: short | long | bow | cap; pattern: plain | vstripes | hstripe | S.
+ * hairStyle: short | long | bow | cap | ponytail | bun | curly | bob | beanie | scarf (cap = hat/scarf color);
+ * pattern: plain | vstripes | hstripe | S; skirt: skirt in the pants color over bare legs.
  */
 export const LOOKS = [
   // Mascot with the yellow bow: brown hair, yellow shirt with red stripes, red shorts
@@ -28,7 +29,15 @@ export const LOOKS = [
   { skin: '#f0c4a0', hair: '#9a9a9a', hairStyle: 'short', glasses: true, shirt: '#2a2a2a', pattern: 'plain', accent: RED, pants: '#555', shoes: '#222' },
   { skin: '#b5774f', hair: '#2a1a10', hairStyle: 'long', shirt: RED, pattern: 'vstripes', accent: YELLOW, pants: '#3b5a80', shoes: YELLOW },
   { skin: '#e2aa7c', hair: '#3a2414', hairStyle: 'cap', cap: RED, shirt: NAVY, pattern: 'hstripe', accent: YELLOW, pants: RED, shortPants: true, shoes: WHITE },
+  { skin: '#f3c9a4', hair: '#c2562a', hairStyle: 'ponytail', shirt: YELLOW, pattern: 'plain', accent: RED, pants: RED, skirt: true, shortPants: true, shoes: BLACK },
+  { skin: '#c68e64', hair: NAVY, hairStyle: 'scarf', cap: NAVY, shirt: RED, pattern: 'hstripe', accent: YELLOW, pants: '#2a2a2a', shoes: WHITE },
+  { skin: '#8d5a3b', hair: '#1c1c1c', hairStyle: 'bun', glasses: true, shirt: WHITE, pattern: 'vstripes', accent: RED, pants: NAVY, skirt: true, shortPants: true, shoes: RED },
+  { skin: '#6b4228', hair: '#1c1c1c', hairStyle: 'curly', shirt: YELLOW, pattern: 'hstripe', accent: NAVY, pants: '#555', shoes: YELLOW },
+  { skin: '#e2aa7c', hair: '#6b3e1f', hairStyle: 'beanie', cap: YELLOW, shirt: RED, pattern: 'plain', accent: YELLOW, pants: '#2a2a2a', shoes: '#222' },
+  { skin: '#f0c4a0', hair: '#7ecfc4', hairStyle: 'bob', shirt: '#2a2a2a', pattern: 'hstripe', accent: YELLOW, pants: RED, shortPants: true, shoes: WHITE },
+  { skin: '#8d5a3b', hair: '#2a1a10', hairStyle: 'ponytail', shirt: RED, pattern: 'vstripes', accent: YELLOW, pants: '#3b5a80', shoes: WHITE },
 ];
+if (LOOKS.length !== LOOK_COUNT) throw new Error('LOOKS must match LOOK_COUNT in map.js');
 
 /** 3x5 (M: 5x5) pixel glyphs for the few words drawn into sprites. */
 const GLYPHS = {
@@ -165,6 +174,7 @@ function drawCharacter(ctx, L, view, frame, breath, blink, riding = false, wave 
       rect(ctx, L.shoes, lx - (side ? 0 : 1), 21 - l, 3, 2);
     });
   }
+  if (L.skirt && !riding) rect(ctx, pantsColor, view === 'right' ? 4 : 3, 15, view === 'right' ? 8 : 10, 3);
 
   // Torso
   const tx = view === 'right' ? 5 : 4;
@@ -182,8 +192,8 @@ function drawCharacter(ctx, L, view, frame, breath, blink, riding = false, wave 
   const swing = riding ? 0 : frame === 1 ? 1 : frame === 3 ? -1 : 0;
   if (wave) {
     // One arm raised above the head, the hand moving back and forth
-    rect(ctx, L.shirt, 12, 7 + u, 1, 4);
-    rect(ctx, L.skin, 12 + wave - 1, 5 + u, 1, 2);
+    rect(ctx, L.shirt, 12, 5 + u, 1, 6);
+    rect(ctx, L.skin, 12 + wave - 1, 2 + u, 2, 3);
     if (view !== 'right') {
       rect(ctx, L.shirt, 3, 10 + u, 1, 3);
       rect(ctx, L.skin, 3, 13 + u, 1, 2);
@@ -218,6 +228,7 @@ function drawCharacter(ctx, L, view, frame, breath, blink, riding = false, wave 
     rect(ctx, L.hair, 4, hy + 2, 3, 3);
     if (L.hairStyle === 'long') rect(ctx, L.hair, 3, hy + 1, 3, 9);
   }
+  drawHairStyle(ctx, L, view, hy);
   if (L.mask) rect(ctx, YELLOW, view === 'right' ? 6 : 4, hy + 3, view === 'right' ? 6 : 8, 2);
   if (L.hairStyle === 'bow') {
     rect(ctx, YELLOW, 5, hy - 1, 2, 2);
@@ -248,6 +259,48 @@ function drawCharacter(ctx, L, view, frame, breath, blink, riding = false, wave 
   }
 
   addOutline(ctx.canvas);
+}
+
+/** Hair styles and headwear drawn on top of the basic short haircut. */
+function drawHairStyle(ctx, L, view, hy) {
+  const side = view === 'right';
+  switch (L.hairStyle) {
+    case 'ponytail':
+      if (view === 'up') rect(ctx, L.hair, 7, hy + 7, 2, 4);
+      else if (side) rect(ctx, L.hair, 2, hy + 2, 2, 5);
+      else rect(ctx, L.hair, 12, hy + 2, 1, 4);
+      break;
+    case 'bun':
+      rect(ctx, L.hair, 6, hy - 1, 4, 1);
+      break;
+    case 'curly':
+      rect(ctx, L.hair, 3, hy - 1, side ? 9 : 10, 3);
+      if (view === 'up') rect(ctx, L.hair, 3, hy, 10, 7);
+      else if (side) rect(ctx, L.hair, 3, hy + 2, 4, 4);
+      else {
+        rect(ctx, L.hair, 3, hy + 2, 1, 4);
+        rect(ctx, L.hair, 12, hy + 2, 1, 4);
+      }
+      break;
+    case 'bob':
+      if (view === 'up') rect(ctx, L.hair, 3, hy, 10, 7);
+      else if (side) rect(ctx, L.hair, 3, hy + 1, 4, 6);
+      else {
+        rect(ctx, L.hair, 3, hy + 1, 2, 6);
+        rect(ctx, L.hair, 11, hy + 1, 2, 6);
+      }
+      break;
+    case 'beanie':
+      rect(ctx, L.cap, 4, hy - 1, 8, 3);
+      rect(ctx, WHITE, 7, hy - 1, 2, 1);
+      break;
+    case 'scarf':
+      // Headscarf covering hair and neck, face left open
+      rect(ctx, L.cap, 3, hy - 1, 10, 10);
+      if (view === 'down') rect(ctx, L.skin, 5, hy + 2, 6, 6);
+      else if (side) rect(ctx, L.skin, 7, hy + 2, 5, 6);
+      break;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -676,6 +729,53 @@ function drawRider(ctx, L, view, frame, breath, blink, color, wave) {
     rect(ctx, color, 8, 18, 4, 2);
     rect(ctx, RED, 9, 19, 2, 1);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Birds on the Aasee (facing right; game.js mirrors them)
+// ---------------------------------------------------------------------------
+
+const birdCache = new Map();
+
+/**
+ * Return a cached bird frame; frame 1 bobs 1px down (paddling).
+ * @param {'duck'|'duckling'|'swan'} kind
+ */
+export function getBirdSprite(kind, frame) {
+  const key = `${kind}|${frame}`;
+  let canvas = birdCache.get(key);
+  if (canvas) return canvas;
+  const size = { duck: [14, 11], duckling: [9, 8], swan: [18, 15] }[kind];
+  let ctx;
+  [canvas, ctx] = makeCanvas(...size);
+  ctx.translate(0, frame);
+  if (kind === 'duck') {
+    // Mallard: brown body, green head, white collar, yellow bill
+    rect(ctx, '#8a6a4a', 2, 5, 9, 3);
+    rect(ctx, '#5a4030', 1, 4, 2, 2);
+    rect(ctx, '#6b4f35', 4, 5, 4, 1);
+    rect(ctx, WHITE, 8, 4, 2, 1);
+    rect(ctx, '#2e7d32', 8, 1, 3, 3);
+    rect(ctx, BLACK, 9, 2);
+    rect(ctx, '#f0b000', 11, 2, 2, 1);
+  } else if (kind === 'duckling') {
+    rect(ctx, YELLOW, 1, 3, 5, 2);
+    rect(ctx, YELLOW, 4, 1, 2, 2);
+    rect(ctx, BLACK, 5, 1);
+    rect(ctx, '#e07020', 6, 2);
+  } else {
+    // Mute swan: white body, S-shaped neck, orange bill with black knob
+    rect(ctx, WHITE, 2, 8, 11, 4);
+    rect(ctx, WHITE, 1, 7, 3, 2);
+    rect(ctx, '#dcdcdc', 4, 9, 7, 1);
+    rect(ctx, WHITE, 11, 4, 2, 5);
+    rect(ctx, WHITE, 12, 2, 3, 2);
+    rect(ctx, BLACK, 13, 3);
+    rect(ctx, '#e07020', 15, 3, 2, 1);
+  }
+  addOutline(canvas);
+  birdCache.set(key, canvas);
+  return canvas;
 }
 
 /** Draw a shaded ball with outline. */

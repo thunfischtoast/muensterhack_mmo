@@ -12,7 +12,7 @@ export const WORLD_W = MAP_W * TILE;
 export const WORLD_H = MAP_H * TILE;
 
 /** Number of character outfits; the server picks one per player, sprites.js defines them. */
-export const LOOK_COUNT = 8;
+export const LOOK_COUNT = 15;
 
 /** Tile rectangle on the plaza (in front of the Münsterhack stand) where players spawn. */
 export const SPAWN = { x: 12, y: 11, w: 9, h: 4 };
@@ -108,6 +108,41 @@ export const BIKES = OBJECTS.filter((o) => o.type === 'bikes').flatMap((o) =>
     color: bikeColor(o.v ?? 0, i),
   })),
 );
+
+/**
+ * Ducks and a swan on the Aasee, each swimming an elliptical loop (center and radii in tiles).
+ * Position is a function of the wall clock, so all clients show roughly the same scene.
+ */
+const duckLoop = { cx: 28, cy: 25.5, rx: 6, ry: 2.5, period: 60 };
+export const BIRDS = [
+  { kind: 'duck', ...duckLoop, phase: 0 },
+  { kind: 'duckling', ...duckLoop, phase: -0.03 },
+  { kind: 'duckling', ...duckLoop, phase: -0.05 },
+  { kind: 'duck', cx: 33, cy: 24, rx: 4, ry: 1.5, period: 45, phase: 0.5 },
+  { kind: 'swan', cx: 30, cy: 26.5, rx: 7, ry: 2.5, period: -90, phase: 0.2 },
+];
+
+/** Position (pixels) and horizontal heading of a bird at time `t` (seconds). */
+export function birdAt(b, t) {
+  const a = 2 * Math.PI * (t / b.period + b.phase);
+  return {
+    x: (b.cx + b.rx * Math.cos(a)) * TILE,
+    y: (b.cy + b.ry * Math.sin(a)) * TILE,
+    left: Math.sin(a) * Math.sign(b.period) > 0,
+  };
+}
+
+// Fail fast if a loop leaves the water (checked with a sprite-sized margin).
+for (const b of BIRDS) {
+  for (let i = 0; i < 64; i++) {
+    const { x, y } = birdAt(b, (i / 64) * Math.abs(b.period));
+    for (const dx of [-8, 8]) {
+      if (GROUND[Math.floor(y / TILE)]?.[Math.floor((x + dx) / TILE)] !== '~') {
+        throw new Error(`Bird loop leaves the water at ${x}, ${y}`);
+      }
+    }
+  }
+}
 
 const solid = new Uint8Array(MAP_W * MAP_H);
 for (let y = 0; y < MAP_H; y++) {
