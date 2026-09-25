@@ -842,11 +842,11 @@ function eventRandom(n) {
   return x - Math.floor(x);
 }
 
-/** Squirrel scurrying across the Promenade for 3.5 s of every 40 s, or null. */
+/** Squirrel scurrying across the Promenade for 3.5 s of every 30 s, or null. */
 function squirrelAt(t) {
-  const p = t % 40;
+  const p = t % 30;
   if (p >= 3.5) return null;
-  const n = Math.floor(t / 40);
+  const n = Math.floor(t / 30);
   const k = p / 3.5;
   const right = n % 2 === 0;
   const x0 = 35 * TILE + 12;
@@ -958,7 +958,7 @@ function drawBuildingEggs(now) {
     const a = turn * 2 * Math.PI;
     for (let r = 0; r <= len; r += 0.5) ctx.fillRect(Math.round(cx + Math.sin(a) * r), Math.round(cy - Math.cos(a) * r), 1, 1);
   }
-  if (t % 240 < 8) {
+  if (t % 90 < 8) {
     // Tower keeper in the middle belfry opening, music notes rising from her horn
     ctx.drawImage(getCritterSprite('keeper'), TOWER_X + 20, 49);
     for (let i = 0; i < 3; i++) {
@@ -970,7 +970,7 @@ function drawBuildingEggs(now) {
       ctx.fillRect(nx + 1, ny, 1, 1);
     }
   }
-  if ((t + 60) % 150 < 6) {
+  if ((t + 30) % 60 < 6) {
     const houseTop = (BANNER_HOUSE.y + BANNER_HOUSE.h) * TILE - 80;
     ctx.drawImage(getCritterSprite('mascot', Math.floor(now / 250) % 2), BANNER_HOUSE.x * TILE + 48, houseTop + 28);
   }
