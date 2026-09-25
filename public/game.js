@@ -7,7 +7,7 @@ import {
 } from './map.js';
 import {
   buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite,
-  CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES,
+  CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
 } from './sprites.js';
 import { findPath } from './path.js';
 
@@ -22,7 +22,8 @@ const SPARK_MS = 400;
 const MAX_PARTICLES = 200;
 /** Dust colors per ground type (see GROUND in map.js). */
 const DUST_COLORS = {
-  c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], s: ['#d9c88e', '#f0e4b8'], '.': ['#3f8a35', '#6cbf55'],
+  c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], t: ['#b5ad9e', '#e4ded2'], j: ['#7a5230', '#a0703f'],
+  '.': ['#3f8a35', '#6cbf55'],
 };
 /** Offset from the feet to where dust kicks up behind a walker or the rear wheel of a rider. */
 const DUST_BEHIND = { right: [-5, 0], left: [5, 0], down: [0, -2], up: [0, 2] };
@@ -52,14 +53,15 @@ const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
 const ground = buildGroundFrames();
-// Objects never move, so their draw order entries are built once.
+// Objects never move, so their draw order entries are built once; animated ones keep one sprite per water frame.
 const objectEntries = OBJECTS.map((o) => {
-  const sprite = getObjectSprite(o);
+  const frames = ANIMATED_OBJECTS.has(o.type) ? WATER_FRAMES : 1;
+  const sprites = Array.from({ length: frames }, (_, f) => getObjectSprite(o, f));
   return {
     sortY: (o.y + o.h) * TILE,
-    sprite,
-    x: o.x * TILE + (o.w * TILE - sprite.width) / 2,
-    y: (o.y + o.h) * TILE - sprite.height,
+    sprites,
+    x: o.x * TILE + (o.w * TILE - sprites[0].width) / 2,
+    y: (o.y + o.h) * TILE - sprites[0].height,
   };
 });
 
@@ -725,7 +727,8 @@ function render(now) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(scale, 0, 0, scale, -ox, -oy);
-  ctx.drawImage(ground[Math.floor(now / 350) % WATER_FRAMES], 0, 0);
+  const waterFrame = Math.floor(now / 350) % WATER_FRAMES;
+  ctx.drawImage(ground[waterFrame], 0, 0);
   drawMarker(now);
 
   const sortedPlayers = [...players.values()].sort((a, b) => a.y - b.y);
@@ -737,7 +740,7 @@ function render(now) {
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
     else if (item.bird) drawBird(item.bird, now);
-    else ctx.drawImage(item.sprite, item.x, item.y);
+    else ctx.drawImage(item.sprites[item.sprites.length > 1 ? waterFrame : 0], item.x, item.y);
   }
   // Particles on top: they are tiny and short-lived, and under the sprites they would be hidden.
   for (const q of particles) {

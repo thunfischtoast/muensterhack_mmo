@@ -1,6 +1,6 @@
 # MS HACK Plaza
 
-Small browser multiplayer game for [Münsterhack 2026](https://www.muensterhack.de/): pick a name, walk around a pixel-art Münster (Prinzipalmarkt, St. Lamberti, Aasee with the Giant Pool Balls, Promenade, lots of Leezen) and chat via speech bubbles. All sprites are drawn procedurally in code.
+Small browser multiplayer game for [Münsterhack 2026](https://www.muensterhack.de/): pick a name, walk around a pixel-art Münster (Prinzipalmarkt with the Historic Town Hall and a Wochenmarkt, St. Lamberti with its cages and the Lambertibrunnen, the Dom towers peeking over the roofs, the Kiepenkerl, the Aaseeterrassen with the Giant Pool Balls and pedal boats, the Promenade with the Buddenturm, lots of Leezen) and chat via speech bubbles. All sprites are drawn procedurally in code.
 
 ## Run with Docker
 

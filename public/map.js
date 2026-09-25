@@ -19,12 +19,13 @@ export const SPAWN = { x: 12, y: 11, w: 9, h: 4 };
 
 /**
  * Ground tiles, one character per tile.
- * '.' grass, 'c' cobblestone (Prinzipalmarkt), '=' path, 's' sand, '~' water (Aasee, solid).
+ * '.' grass, 'c' cobblestone (Prinzipalmarkt), '=' path, 't' stone terrace steps (Aaseeterrassen),
+ * 'j' wooden jetty, '~' water (Aasee, solid), 'x' roofs behind the Prinzipalmarkt (backdrop, solid).
  */
 export const GROUND = [
-  'cccccccccccccccccccccccccccccccccc..==..',
-  'cccccccccccccccccccccccccccccccccc..==..',
-  'cccccccccccccccccccccccccccccccccc..==..',
+  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..==..',
+  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..==..',
+  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..==..',
   'cccccccccccccccccccccccccccccccccc..==..',
   'cccccccccccccccccccccccccccccccccc..==..',
   'cccccccccccccccccccccccccccccccccc..==..',
@@ -42,35 +43,46 @@ export const GROUND = [
   '..............==....................==..',
   '..====================================..',
   '........................................',
-  '....................ssssssssssssssssssss',
-  '..................ss~~~~~~~~~~~~~~~~~~~~',
-  '................sss~~~~~~~~~~~~~~~~~~~~~',
-  '...............ss~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
-  '..............ss~~~~~~~~~~~~~~~~~~~~~~~~',
+  '....................tttttttttttttttttttt',
+  '..................tt~~~~~~~~~~~~~~~~~~j~',
+  '................ttt~~~~~~~~~~~~~~~~~~~j~',
+  '...............tt~~~~~~~~~~~~~~~~~~~~~j~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
+  '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
 ];
 
 /**
  * World objects. x/y/w/h is the solid footprint in tiles; the sprite is drawn
  * bottom-aligned and horizontally centered on it and may extend above it.
- * `v` selects a variant (house facade, bike colors).
+ * `v` selects a variant (house facade, bike colors, tree kind, stall awning).
  */
 export const OBJECTS = [
-  // Prinzipalmarkt: row of gabled merchant houses with arcades
-  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({ type: 'house', x: i * 4, y: 0, w: 4, h: 5, v: i })),
+  // Backdrop: the two west towers of St.-Paulus-Dom peeking out behind the gables
+  { type: 'dom', x: 7, y: 0, w: 6, h: 2 },
+  // Prinzipalmarkt: gabled merchant houses with arcades; v = 5 is the historic town hall
+  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({ type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i })),
+  // St. Lamberti: nave behind the tower, Lambertibrunnen in front
+  { type: 'church', x: 28, y: 3, w: 6, h: 3 },
   { type: 'tower', x: 30, y: 6, w: 3, h: 2 },
+  { type: 'fountain', x: 26, y: 10, w: 2, h: 1 },
   { type: 'stand', x: 15, y: 9, w: 3, h: 1 },
+  { type: 'streetsign', x: 13, y: 6, w: 1, h: 1 },
+  { type: 'kiepenkerl', x: 6, y: 11, w: 1, h: 1 },
+  // Wochenmarkt stalls
+  { type: 'stall', x: 1, y: 7, w: 3, h: 1, v: 0 },
+  { type: 'stall', x: 5, y: 7, w: 3, h: 1, v: 1 },
+  { type: 'stall', x: 19, y: 7, w: 3, h: 1, v: 2 },
   // Leezen (bicycles), in racks and parked loosely
   { type: 'bikes', x: 2, y: 13, w: 5, h: 1, v: 0 },
   { type: 'bikes', x: 23, y: 14, w: 4, h: 1, v: 2 },
   { type: 'bikes', x: 20, y: 17, w: 3, h: 1, v: 4 },
   { type: 'bikes', x: 12, y: 19, w: 1, h: 1, v: 1 },
   { type: 'bikes', x: 28, y: 19, w: 1, h: 1, v: 3 },
-  { type: 'bikes', x: 33, y: 4, w: 1, h: 1, v: 5 },
+  { type: 'bikes', x: 33, y: 10, w: 1, h: 1, v: 5 },
   { type: 'bench', x: 10, y: 10, w: 2, h: 1 },
   { type: 'bench', x: 21, y: 10, w: 2, h: 1 },
   { type: 'bench', x: 5, y: 19, w: 2, h: 1 },
@@ -81,15 +93,24 @@ export const OBJECTS = [
   { type: 'lamp', x: 16, y: 16, w: 1, h: 1 },
   { type: 'lamp', x: 33, y: 17, w: 1, h: 1 },
   { type: 'poolballs', x: 15, y: 20, w: 3, h: 2 },
-  // Promenade: linden trees on both sides of the path
+  // Promenade: linden trees on both sides of the bike path, blue bike-path signs, Buddenturm
   ...[1, 4, 7, 10, 13, 16].flatMap((y) => [
-    { type: 'tree', x: 35, y, w: 1, h: 1 },
-    { type: 'tree', x: 38, y, w: 1, h: 1 },
+    { type: 'tree', x: 35, y, w: 1, h: 1, v: 0 },
+    ...(y < 16 ? [{ type: 'tree', x: 38, y, w: 1, h: 1, v: 0 }] : []),
   ]),
+  { type: 'bikesign', x: 34, y: 5, w: 1, h: 1 },
+  { type: 'bikesign', x: 34, y: 14, w: 1, h: 1 },
+  { type: 'buddenturm', x: 38, y: 17, w: 2, h: 2 },
   // Park by the Aasee
-  ...[[2, 21], [9, 21], [5, 23], [12, 24], [3, 26], [8, 27], [11, 28], [4, 17], [26, 16], [30, 17]].map(
-    ([x, y]) => ({ type: 'tree', x, y, w: 1, h: 1 }),
+  ...[[2, 21], [9, 21], [5, 23], [12, 24], [3, 26], [8, 27], [11, 28], [4, 17], [27, 17], [30, 17]].map(
+    ([x, y], i) => ({ type: 'tree', x, y, w: 1, h: 1, v: i % 3 }),
   ),
+  ...[[6, 21], [1, 24], [13, 27], [7, 17], [10, 23]].map(([x, y]) => ({ type: 'bush', x, y, w: 1, h: 1 })),
+  { type: 'flowers', x: 9, y: 16, w: 2, h: 1 },
+  { type: 'flowers', x: 18, y: 16, w: 2, h: 1 },
+  // Aasee: pedal boats moored at the jetty
+  { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
+  { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },
 ];
 
 /** Number of bike colors; sprites.js defines them, the server validates the ridden bike against it. */
@@ -118,7 +139,7 @@ export const BIRDS = [
   { kind: 'duck', ...duckLoop, phase: 0 },
   { kind: 'duckling', ...duckLoop, phase: -0.03 },
   { kind: 'duckling', ...duckLoop, phase: -0.05 },
-  { kind: 'duck', cx: 33, cy: 24, rx: 4, ry: 1.5, period: 45, phase: 0.5 },
+  { kind: 'duck', cx: 32.5, cy: 24.5, rx: 3.5, ry: 1.5, period: 45, phase: 0.5 },
   { kind: 'swan', cx: 30, cy: 26.5, rx: 7, ry: 2.5, period: -90, phase: 0.2 },
 ];
 
@@ -147,7 +168,7 @@ for (const b of BIRDS) {
 const solid = new Uint8Array(MAP_W * MAP_H);
 for (let y = 0; y < MAP_H; y++) {
   for (let x = 0; x < MAP_W; x++) {
-    if (GROUND[y][x] === '~') solid[y * MAP_W + x] = 1;
+    if (GROUND[y][x] === '~' || GROUND[y][x] === 'x') solid[y * MAP_W + x] = 1;
   }
 }
 for (const o of OBJECTS) {
