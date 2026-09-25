@@ -4,7 +4,7 @@
  * Everything is drawn once at native resolution (16px tiles) into offscreen
  * canvases and cached; game.js scales them up with smoothing disabled.
  */
-import { TILE, MAP_W, MAP_H, GROUND } from './map.js';
+import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, bikeColor } from './map.js';
 
 const RED = '#DA121A';
 const YELLOW = '#FCDD09';
@@ -129,8 +129,11 @@ export function getCharacterSprite(look, dir, frame, breath, blink) {
   return { canvas, flip };
 }
 
-/** Draw one character frame; the outline is added automatically around the silhouette. */
-function drawCharacter(ctx, L, view, frame, breath, blink) {
+/**
+ * Draw one character frame; the outline is added automatically around the silhouette.
+ * When riding, only the hips are drawn (legs belong to the bike sprite) and the arms reach for the handlebar.
+ */
+function drawCharacter(ctx, L, view, frame, breath, blink, riding = false) {
   const stride = frame % 2 === 1;
   // The upper body dips 1px on stride frames and while breathing out.
   const u = stride || breath ? 1 : 0;
@@ -138,7 +141,9 @@ function drawCharacter(ctx, L, view, frame, breath, blink) {
   const legColor = L.shortPants ? L.skin : L.pants;
 
   // Legs and shoes
-  if (view === 'right') {
+  if (riding) {
+    rect(ctx, pantsColor, view === 'right' ? 5 : 4, 16, view === 'right' ? 6 : 8, 2);
+  } else if (view === 'right') {
     rect(ctx, pantsColor, 5, 16, 6, 2);
     if (stride) {
       rect(ctx, legColor, 9, 18, 2, 2);
@@ -173,8 +178,10 @@ function drawCharacter(ctx, L, view, frame, breath, blink) {
   }
 
   // Arms swing opposite to each other while walking.
-  const swing = frame === 1 ? 1 : frame === 3 ? -1 : 0;
-  if (view === 'right') {
+  const swing = riding ? 0 : frame === 1 ? 1 : frame === 3 ? -1 : 0;
+  if (view === 'right' && riding) {
+    line(ctx, L.skin, 8, 13 + u, 11, 14 + u);
+  } else if (view === 'right') {
     rect(ctx, L.skin, 7 + swing * 2, 13 + u, 2, 2);
   } else {
     [[3, swing], [12, -swing]].forEach(([ax, s]) => {
@@ -538,6 +545,7 @@ function drawLamp(ctx) {
 }
 
 const BIKE_COLORS = [RED, YELLOW, NAVY, '#3a9a3a', '#e8e8e8', '#1a1a1a', '#e07020'];
+if (BIKE_COLORS.length !== BIKE_COLOR_COUNT) throw new Error('BIKE_COLORS must match BIKE_COLOR_COUNT in map.js');
 
 /** Pixel line (Bresenham). */
 function line(ctx, color, x0, y0, x1, y1) {
@@ -555,8 +563,10 @@ function line(ctx, color, x0, y0, x1, y1) {
   }
 }
 
-/** One side-view bicycle (Leeze) in a 16x16 cell at offset ox. */
-function drawBike(ctx, ox, color) {
+/** One side-view bicycle (Leeze) in a 16x16 cell at offset (ox, oy). */
+function drawBike(ctx, ox, color, oy = 0) {
+  ctx.save();
+  ctx.translate(0, oy);
   for (const cx of [4, 12]) {
     for (let y = 6; y < 16; y++) {
       for (let x = cx - 5; x <= cx + 5; x++) {
@@ -575,6 +585,7 @@ function drawBike(ctx, ox, color) {
   rect(ctx, BLACK, ox + 5, 5, 4, 1);
   rect(ctx, '#555', ox + 10, 4, 1, 3);
   rect(ctx, BLACK, ox + 10, 4, 3, 1);
+  ctx.restore();
 }
 
 /** Row of bikes; more than one bike stands in a rack. */
@@ -583,7 +594,79 @@ function drawBikes(ctx, count, v) {
     rect(ctx, '#6a6a6a', 1, 9, count * 16 - 2, 1);
     for (let i = 0; i < count; i++) rect(ctx, '#6a6a6a', i * 16 + 7, 9, 1, 7);
   }
-  for (let i = 0; i < count; i++) drawBike(ctx, i * 16, BIKE_COLORS[(v + i * 3) % BIKE_COLORS.length]);
+  for (let i = 0; i < count; i++) drawBike(ctx, i * 16, BIKE_COLORS[bikeColor(v, i)]);
+}
+
+// ---------------------------------------------------------------------------
+// Riders (20x27, wheels touching the bottom row)
+// ---------------------------------------------------------------------------
+
+export const RIDE_W = 20;
+export const RIDE_H = 27;
+/** How much higher a rider's head is than a walking character's. */
+export const RIDE_LIFT = 4;
+const riderCache = new Map();
+
+/**
+ * Return a cached frame of a character riding a bike; same conventions as getCharacterSprite.
+ * @param {number} bike color index of the bike
+ * @param {number} frame pedal frame 0-3
+ */
+export function getRiderSprite(look, dir, frame, breath, blink, bike) {
+  const flip = dir === 'left';
+  const view = flip ? 'right' : dir;
+  const key = `${look}|${view}|${frame}|${breath}|${blink ? 1 : 0}|${bike}`;
+  let canvas = riderCache.get(key);
+  if (!canvas) {
+    let ctx;
+    [canvas, ctx] = makeCanvas(RIDE_W, RIDE_H);
+    drawRider(ctx, LOOKS[look % LOOKS.length], view, frame, breath, blink, BIKE_COLORS[bike % BIKE_COLORS.length]);
+    riderCache.set(key, canvas);
+  }
+  return { canvas, flip };
+}
+
+/** Compose bike, pedaling legs and the (leg-less) character into one rider frame. */
+function drawRider(ctx, L, view, frame, breath, blink, color) {
+  const [body, bodyCtx] = makeCanvas(CHAR_W, CHAR_H);
+  drawCharacter(bodyCtx, L, view, frame, breath, blink, true);
+  const legColor = L.shortPants ? L.skin : L.pants;
+
+  if (view === 'right') {
+    drawBike(ctx, 2, color, 11);
+    // Near-side leg from the hip to the pedal circling around the bottom bracket at (10, 22).
+    const [px, py] = [[10, 20], [12, 22], [10, 24], [8, 22]][frame];
+    line(ctx, legColor, 9, 17, px, py);
+    rect(ctx, L.shoes, px - 1, py, 3, 1);
+    ctx.drawImage(body, 1, -1);
+    rect(ctx, '#555', 12, 14, 1, 2);
+    return;
+  }
+
+  const handlebar = () => rect(ctx, BLACK, 4, 13, 12, 1);
+  if (view === 'up') handlebar();
+  // Legs pedal alternately: one knee up while the other is down.
+  [7, 11].forEach((lx, side) => {
+    const lift = (frame + side * 2) % 4 < 2 ? 1 : 0;
+    rect(ctx, legColor, lx, 17, 2, 3 - lift);
+    rect(ctx, L.shoes, lx, 20 - lift, 2, 1);
+  });
+  ctx.drawImage(body, 2, -1);
+  rect(ctx, '#151515', 9, 20, 2, 7);
+  if (view === 'down') {
+    // Front wheel with fork, headlight and handlebar in front of the body
+    rect(ctx, color, 8, 18, 4, 1);
+    rect(ctx, color, 8, 19, 1, 3);
+    rect(ctx, color, 11, 19, 1, 3);
+    rect(ctx, '#555', 9, 14, 2, 4);
+    rect(ctx, YELLOW, 9, 17, 2, 1);
+    handlebar();
+  } else {
+    // Rear wheel with mudguard, rack and reflector
+    rect(ctx, BLACK, 8, 17, 4, 1);
+    rect(ctx, color, 8, 18, 4, 2);
+    rect(ctx, RED, 9, 19, 2, 1);
+  }
 }
 
 /** Draw a shaded ball with outline. */

@@ -92,6 +92,23 @@ export const OBJECTS = [
   ),
 ];
 
+/** Number of bike colors; sprites.js defines them, the server validates the ridden bike against it. */
+export const BIKE_COLOR_COUNT = 7;
+
+/** Color index of the i-th bike in a `bikes` object with variant v. */
+export function bikeColor(v, i) {
+  return (v + i * 3) % BIKE_COLOR_COUNT;
+}
+
+/** Every rideable bike: tile center in pixels and its color index. */
+export const BIKES = OBJECTS.filter((o) => o.type === 'bikes').flatMap((o) =>
+  Array.from({ length: o.w }, (_, i) => ({
+    x: (o.x + i) * TILE + TILE / 2,
+    y: o.y * TILE + TILE / 2,
+    color: bikeColor(o.v ?? 0, i),
+  })),
+);
+
 const solid = new Uint8Array(MAP_W * MAP_H);
 for (let y = 0; y < MAP_H; y++) {
   for (let x = 0; x < MAP_W; x++) {

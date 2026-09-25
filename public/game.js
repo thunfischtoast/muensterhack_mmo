@@ -2,11 +2,16 @@
  * Browser client: login, input (keyboard, click/tap-to-walk, chat), WebSocket
  * networking, local movement with tile collision, camera and canvas rendering.
  */
-import { TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, OBJECTS, SPAWN, isSolid } from './map.js';
-import { buildGroundFrames, getObjectSprite, getCharacterSprite, CHAR_W, CHAR_H, WATER_FRAMES } from './sprites.js';
+import { TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, OBJECTS, SPAWN, BIKES, isSolid } from './map.js';
+import {
+  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite,
+  CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES,
+} from './sprites.js';
 import { findPath } from './path.js';
 
 const SPEED = 72; // pixels per second
+const RIDE_SPEED = 140;
+const BIKE_REACH = 24; // max distance in pixels from the feet to a bike to get on
 const SEND_MS = 100;
 const BUBBLE_MS = 5000;
 const BUBBLE_FADE_MS = 500;
@@ -30,6 +35,7 @@ const noticeEl = document.getElementById('notice');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatButton = document.getElementById('chat-button');
+const bikeButton = document.getElementById('bike-button');
 
 const ground = buildGroundFrames();
 // Objects never move, so their draw order entries are built once.
@@ -55,19 +61,17 @@ let lastSent = '';
 let lastSendTime = 0;
 let scale = 3;
 let dpr = 1;
+let version = null; // server build seen on the first connect; a different one means we are outdated
+let bikeButtonText = '';
 
 // ---------------------------------------------------------------------------
 // Networking
 // ---------------------------------------------------------------------------
 
-/** Open the WebSocket (ws/wss derived from the page URL) and join with the chosen name. */
+/** Open the WebSocket (ws/wss derived from the page URL); joining happens after the server's hello. */
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${proto}//${location.host}`);
-  ws.onopen = () => {
-    const me = players.get(myId);
-    send(me ? { t: 'join', name: myName, look: me.look, x: me.x, y: me.y } : { t: 'join', name: myName });
-  };
   ws.onmessage = (event) => {
     let msg;
     try {
@@ -100,6 +104,7 @@ function addPlayer(p) {
     targetY: p.y,
     dir: p.dir,
     moving: p.moving,
+    bike: p.bike ?? null,
     walkTime: 0,
     breathPhase: Math.random() * 1400,
     blinkAt: performance.now() + 1000 + Math.random() * 3000,
@@ -110,6 +115,18 @@ function addPlayer(p) {
 /** Apply a server message to the local world state. */
 function handleMessage(msg) {
   switch (msg.t) {
+    case 'hello': {
+      // The server was updated while this page was open: load the new client instead of rejoining.
+      if (version && msg.version !== version) {
+        location.reload();
+        return;
+      }
+      version = msg.version;
+      const me = players.get(myId);
+      const join = { t: 'join', version, name: myName };
+      send(me ? { ...join, look: me.look, x: me.x, y: me.y } : join);
+      break;
+    }
     case 'welcome': {
       const previous = players.get(myId);
       players.clear();
@@ -121,6 +138,7 @@ function handleMessage(msg) {
         me.x = previous.x;
         me.y = previous.y;
         me.dir = previous.dir;
+        me.bike = previous.bike;
       }
       lastSent = '';
       loginEl.hidden = true;
@@ -143,6 +161,7 @@ function handleMessage(msg) {
         p.targetY = s.y;
         p.dir = s.dir;
         p.moving = s.moving;
+        p.bike = s.bike ?? null;
       }
       break;
     case 'chat': {
@@ -200,6 +219,10 @@ window.addEventListener('keydown', (event) => {
     openChat();
     return;
   }
+  if (key === 'KeyE' && !event.repeat) {
+    toggleBike();
+    return;
+  }
   if (KEY_DIRS[key]) {
     event.preventDefault();
     keys.add(KEY_DIRS[key]);
@@ -230,6 +253,45 @@ chatInput.addEventListener('blur', () => {
 });
 
 chatButton.addEventListener('click', openChat);
+bikeButton.addEventListener('click', () => {
+  toggleBike();
+  bikeButton.blur(); // otherwise Space/Enter would keep triggering the focused button
+});
+
+/** Nearest bike within reach of the local player's feet, or null. */
+function nearestBike(me) {
+  let best = null;
+  let bestDist = BIKE_REACH;
+  for (const b of BIKES) {
+    const d = Math.hypot(b.x - me.x, b.y - me.y);
+    if (d <= bestDist) {
+      best = b;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/** Get on the nearest bike, or off the current one. The bike in the world stays where it is. */
+function toggleBike() {
+  const me = players.get(myId);
+  if (!me) return;
+  if (me.bike !== null) {
+    me.bike = null;
+  } else {
+    const bike = nearestBike(me);
+    if (bike) me.bike = bike.color;
+  }
+}
+
+/** Show "Aufsteigen" near a bike and "Absteigen" while riding; touch the DOM only on changes. */
+function updateBikeButton(me) {
+  const text = me.bike !== null ? 'Absteigen' : nearestBike(me) ? 'Aufsteigen' : '';
+  if (text === bikeButtonText) return;
+  bikeButtonText = text;
+  bikeButton.textContent = text;
+  bikeButton.hidden = !text;
+}
 
 canvas.addEventListener('pointerdown', (event) => {
   if (myId === null || event.button !== 0) return;
@@ -295,7 +357,7 @@ function update(dt, now) {
   const me = players.get(myId);
   let vx = (keys.has('right') ? 1 : 0) - (keys.has('left') ? 1 : 0);
   let vy = (keys.has('down') ? 1 : 0) - (keys.has('up') ? 1 : 0);
-  let step = SPEED * dt;
+  let step = (me.bike !== null ? RIDE_SPEED : SPEED) * dt;
   if (vx || vy) {
     path = [];
     marker = null;
@@ -325,6 +387,7 @@ function update(dt, now) {
   me.moving = moved > 0;
   if (me.moving) me.dir = dirFor(vx, vy);
   me.walkTime = me.moving ? me.walkTime + dt : 0;
+  updateBikeButton(me);
 
   for (const p of players.values()) {
     if (p.id === myId) continue;
@@ -343,7 +406,7 @@ function update(dt, now) {
 
   if (now - lastSendTime >= SEND_MS) {
     lastSendTime = now;
-    const msg = JSON.stringify({ t: 'move', x: Math.round(me.x * 10) / 10, y: Math.round(me.y * 10) / 10, dir: me.dir, moving: me.moving });
+    const msg = JSON.stringify({ t: 'move', x: Math.round(me.x * 10) / 10, y: Math.round(me.y * 10) / 10, dir: me.dir, moving: me.moving, bike: me.bike });
     if (msg !== lastSent && ws && ws.readyState === WebSocket.OPEN) {
       ws.send(msg);
       lastSent = msg;
@@ -380,7 +443,7 @@ function camera() {
   return { camX: axis(fx, viewW, WORLD_W), camY: axis(fy, viewH, WORLD_H) };
 }
 
-/** Draw a player sprite with a small shadow; feet at (x, y). */
+/** Draw a player (walking or riding) with a small shadow; feet at (x, y). */
 function drawPlayer(p, now) {
   const x = Math.round(p.x);
   const y = Math.round(p.y);
@@ -389,7 +452,12 @@ function drawPlayer(p, now) {
   const breath = walking ? 0 : Math.floor((now + p.breathPhase) / 700) % 2;
   if (now > p.blinkAt + 140) p.blinkAt = now + 2000 + Math.random() * 4000;
   const blink = now > p.blinkAt;
-  const { canvas: sprite, flip } = getCharacterSprite(p.look, p.dir, frame, breath, blink);
+  const riding = p.bike !== null;
+  const { canvas: sprite, flip } = riding
+    ? getRiderSprite(p.look, p.dir, frame, breath, blink, p.bike)
+    : getCharacterSprite(p.look, p.dir, frame, breath, blink);
+  const w = riding ? RIDE_W : CHAR_W;
+  const h = riding ? RIDE_H : CHAR_H;
 
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fillRect(x - 5, y - 1, 10, 2);
@@ -398,10 +466,10 @@ function drawPlayer(p, now) {
     ctx.save();
     ctx.translate(x, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(sprite, -CHAR_W / 2, y - CHAR_H + 1);
+    ctx.drawImage(sprite, -w / 2, y - h + 1);
     ctx.restore();
   } else {
-    ctx.drawImage(sprite, x - CHAR_W / 2, y - CHAR_H + 1);
+    ctx.drawImage(sprite, x - w / 2, y - h + 1);
   }
 }
 
@@ -473,7 +541,8 @@ function wrapText(text, maxWidth) {
 /** Draw the name label and the speech bubble above a player (screen space). */
 function drawOverlay(p, now, camX, camY, fontPx) {
   const sx = Math.round((p.x - camX) * scale);
-  const headY = Math.round((p.y - CHAR_H - 1 - camY) * scale);
+  const lift = p.bike !== null ? RIDE_LIFT : 0;
+  const headY = Math.round((p.y - CHAR_H - 1 - lift - camY) * scale);
   const o = Math.max(1, Math.round(dpr));
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';

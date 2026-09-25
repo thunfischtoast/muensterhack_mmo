@@ -1,5 +1,5 @@
 /**
- * Integration test: two WebSocket clients join, move and chat through a real server instance.
+ * Integration test: WebSocket clients handshake, join, move, ride and chat through a real server instance.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,24 +33,36 @@ test('join, move and chat are relayed between players', { timeout: 5000 }, async
   const server = await startServer(0);
   const a = await connect(server.port);
   const b = await connect(server.port);
+  const stale = await connect(server.port);
   try {
+    const { version } = await a.next((m) => m.t === 'hello');
+    assert.match(version, /^[0-9a-f]{12}$/);
+
+    // A join from an outdated client (wrong or missing version) is refused.
+    stale.sendJson({ t: 'join', name: 'Old' });
+    await new Promise((resolve) => stale.once('close', resolve));
+
     a.sendJson({ t: 'chat', text: 'before join is ignored' });
-    a.sendJson({ t: 'join', name: '  Abcdefghijklmnopqrstuvwxyz  ' });
+    a.sendJson({ t: 'join', version, name: '  Abcdefghijklmnopqrstuvwxyz  ' });
     const welcomeA = await a.next((m) => m.t === 'welcome');
     const me = welcomeA.players.find((p) => p.id === welcomeA.id);
     assert.equal(me.name, 'Abcdefghijklmnop');
 
-    b.sendJson({ t: 'join', name: '   ' });
+    b.sendJson({ t: 'join', version, name: '   ' });
     const welcomeB = await b.next((m) => m.t === 'welcome');
     assert.equal(welcomeB.players.length, 2);
     const joined = await a.next((m) => m.t === 'join');
     assert.equal(joined.player.name, 'Gast');
     assert.equal(joined.player.id, welcomeB.id);
 
-    a.sendJson({ t: 'move', x: 100, y: -50, dir: 'left', moving: true });
+    a.sendJson({ t: 'move', x: 100, y: -50, dir: 'left', moving: true, bike: 3 });
     const state = await b.next((m) => m.t === 'state' && m.players.some((p) => p.id === welcomeA.id && p.x === 100));
     const moved = state.players.find((p) => p.id === welcomeA.id);
-    assert.deepEqual(moved, { id: welcomeA.id, x: 100, y: 0, dir: 'left', moving: true });
+    assert.deepEqual(moved, { id: welcomeA.id, x: 100, y: 0, dir: 'left', moving: true, bike: 3 });
+
+    a.sendJson({ t: 'move', x: 110, y: 0, dir: 'left', moving: true, bike: 99 });
+    const walked = await b.next((m) => m.t === 'state' && m.players.some((p) => p.id === welcomeA.id && p.x === 110));
+    assert.equal(walked.players.find((p) => p.id === welcomeA.id).bike, null);
 
     a.send('not json');
     a.sendJson({ t: 'chat', text: `  ${'x'.repeat(200)}  ` });
@@ -69,6 +81,7 @@ test('join, move and chat are relayed between players', { timeout: 5000 }, async
   } finally {
     a.close();
     b.close();
+    stale.close();
     await server.close();
   }
 });

@@ -5,11 +5,13 @@
  * Movement is client-authoritative; the server only sanitizes and clamps input.
  */
 import http from 'node:http';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { TILE, WORLD_W, WORLD_H, SPAWN, LOOK_COUNT, isSolid } from './public/map.js';
+import { TILE, WORLD_W, WORLD_H, SPAWN, LOOK_COUNT, BIKE_COLOR_COUNT, isSolid } from './public/map.js';
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const CONTENT_TYPES = {
@@ -29,6 +31,20 @@ const CHAT_COOLDOWN_MS = 500;
 const TICK_MS = 100;
 const HEARTBEAT_MS = 30000;
 const MAX_PAYLOAD = 1024;
+
+/**
+ * Hash of all client files. Clients get it on connect and reload when it differs from the
+ * one they started with, so a deploy never leaves an outdated client talking to a new server.
+ */
+const VERSION = (() => {
+  const hash = crypto.createHash('sha1');
+  const files = readdirSync(PUBLIC_DIR, { recursive: true, withFileTypes: true })
+    .filter((f) => f.isFile())
+    .map((f) => path.join(f.parentPath, f.name))
+    .sort();
+  for (const file of files) hash.update(path.relative(PUBLIC_DIR, file)).update(readFileSync(file));
+  return hash.digest('hex').slice(0, 12);
+})();
 
 /** Serve a file from public/, refusing anything that resolves outside of it. */
 async function serveStatic(req, res) {
@@ -81,9 +97,14 @@ function spawnPoint() {
   return { x: (SPAWN.x + 0.5) * TILE, y: SPAWN.y * TILE + 12 };
 }
 
+/** Bike color index if valid, otherwise null (walking). */
+function cleanBike(value) {
+  return Number.isInteger(value) && value >= 0 && value < BIKE_COLOR_COUNT ? value : null;
+}
+
 /** Public view of a player as sent in welcome/join messages. */
 function publicPlayer(p) {
-  return { id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, moving: p.moving };
+  return { id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, moving: p.moving, bike: p.bike };
 }
 
 /**
@@ -111,6 +132,7 @@ export function startServer(port = 3000) {
     ws.on('pong', () => { ws.isAlive = true; });
     // Oversized or malformed frames emit 'error'; unhandled, it would crash the whole process.
     ws.on('error', () => ws.terminate());
+    ws.send(JSON.stringify({ t: 'hello', version: VERSION }));
 
     ws.on('message', (data, isBinary) => {
       if (isBinary) return;
@@ -125,6 +147,11 @@ export function startServer(port = 3000) {
 
       if (!p) {
         if (msg.t !== 'join') return;
+        // Outdated clients (including ones from before the version check) must reload first.
+        if (msg.version !== VERSION) {
+          ws.close();
+          return;
+        }
         // A reconnecting client passes its previous look and position so it doesn't change or jump.
         const rejoin = Number.isFinite(msg.x) && Number.isFinite(msg.y);
         const player = {
@@ -135,6 +162,7 @@ export function startServer(port = 3000) {
           ...(rejoin ? { x: clamp(msg.x, 0, WORLD_W), y: clamp(msg.y, 0, WORLD_H) } : spawnPoint()),
           dir: 'down',
           moving: false,
+          bike: null,
           lastChat: 0,
         };
         ws.player = player;
@@ -150,6 +178,7 @@ export function startServer(port = 3000) {
         p.y = clamp(msg.y, 0, WORLD_H);
         p.dir = DIRS.has(msg.dir) ? msg.dir : 'down';
         p.moving = msg.moving === true;
+        p.bike = cleanBike(msg.bike);
         dirty = true;
       } else if (msg.t === 'chat') {
         const now = Date.now();
@@ -171,7 +200,7 @@ export function startServer(port = 3000) {
   const tick = setInterval(() => {
     if (!dirty) return;
     dirty = false;
-    const list = [...players.values()].map((p) => ({ id: p.id, x: p.x, y: p.y, dir: p.dir, moving: p.moving }));
+    const list = [...players.values()].map((p) => ({ id: p.id, x: p.x, y: p.y, dir: p.dir, moving: p.moving, bike: p.bike }));
     broadcast({ t: 'state', players: list });
   }, TICK_MS);
 

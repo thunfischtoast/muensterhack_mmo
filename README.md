@@ -12,7 +12,7 @@ Then open http://localhost:3000.
 
 ## Run locally
 
-Requires Node.js 20+.
+Requires Node.js 22+.
 
 ```sh
 npm install && npm start
@@ -26,14 +26,19 @@ Tests: `npm test`.
 |---|---|---|
 | Walk | WASD / arrow keys, or click a destination | Tap a destination |
 | Chat | Enter, type, Enter to send (Esc cancels) | Chat button bottom right |
+| Bike | E next to a bike (or the button) to get on/off | "Aufsteigen" / "Absteigen" button |
 
-Chat messages appear above the character for 5 seconds.
+Chat messages appear above the character for 5 seconds. Riding a bike is about twice as fast as walking; the parked bike stays where it is.
 
 ## Configuration
 
 - `PORT`: HTTP and WebSocket port (default `3000`).
 
 The client derives the WebSocket URL from the page URL, so behind an HTTPS reverse proxy it uses `wss://` automatically. The proxy must forward WebSocket upgrades (e.g. nginx `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`).
+
+## Updates
+
+On startup the server hashes all files in `public/` into a version. Clients get it when they connect; if a reconnect (e.g. after a redeploy) brings a different version, the page reloads itself. Joins with a missing or wrong version are refused.
 
 ## Structure
 
