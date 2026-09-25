@@ -15,6 +15,8 @@ const BIKE_REACH = 24; // max distance in pixels from the feet to a bike to get 
 const SEND_MS = 100;
 const BUBBLE_MS = 5000;
 const BUBBLE_FADE_MS = 500;
+const WAVE_MS = 1200;
+const SPARK_MS = 400;
 const RECONNECT_MS = 2000;
 const FOOT_W = 5; // half width of the collision box around the feet
 const FOOT_H = 4; // height of the collision box above the feet
@@ -36,6 +38,7 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatButton = document.getElementById('chat-button');
 const bikeButton = document.getElementById('bike-button');
+const waveButton = document.getElementById('wave-button');
 const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
@@ -60,6 +63,7 @@ let ws = null;
 let path = [];
 let stuckTime = 0;
 let marker = null;
+let sparks = []; // high-five claps: world position and start time
 let lastSent = '';
 let lastSendTime = 0;
 let scale = 3;
@@ -111,6 +115,7 @@ function addPlayer(p) {
     walkTime: 0,
     breathPhase: Math.random() * 1400,
     blinkAt: performance.now() + 1000 + Math.random() * 3000,
+    waveUntil: 0,
     bubble: null,
   });
 }
@@ -148,6 +153,7 @@ function handleMessage(msg) {
       noticeEl.hidden = true;
       hudEl.hidden = false;
       chatButton.hidden = false;
+      waveButton.hidden = false;
       break;
     }
     case 'join':
@@ -167,6 +173,21 @@ function handleMessage(msg) {
         p.bike = s.bike ?? null;
       }
       break;
+    case 'wave': {
+      const p = players.get(msg.id);
+      const partner = players.get(msg.with);
+      if (!p) break;
+      const now = performance.now();
+      p.waveUntil = now + WAVE_MS;
+      if (partner) {
+        // High five: both face each other; the own player's new facing is synced via the next move message.
+        partner.waveUntil = now + WAVE_MS;
+        p.dir = dirFor(partner.x - p.x, partner.y - p.y);
+        partner.dir = dirFor(p.x - partner.x, p.y - partner.y);
+        sparks.push({ x: (p.x + partner.x) / 2, y: (p.y + partner.y) / 2 - 16, start: now });
+      }
+      break;
+    }
     case 'chat': {
       const p = players.get(msg.id);
       if (p) p.bubble = { text: msg.text, start: performance.now(), lines: null, font: '' };
@@ -225,6 +246,10 @@ window.addEventListener('keydown', (event) => {
     openChat();
     return;
   }
+  if (key === 'KeyQ' && !event.repeat) {
+    send({ t: 'wave' });
+    return;
+  }
   if (key === 'KeyE' && !event.repeat) {
     toggleBike();
     return;
@@ -269,6 +294,10 @@ function drawLookPreview(now) {
   lookCtx.clearRect(0, 0, CHAR_W, CHAR_H);
   lookCtx.drawImage(getCharacterSprite(myLook, 'down', 0, breath, blink).canvas, 0, 0);
 }
+waveButton.addEventListener('click', () => {
+  send({ t: 'wave' });
+  waveButton.blur();
+});
 bikeButton.addEventListener('click', () => {
   toggleBike();
   bikeButton.blur(); // otherwise Space/Enter would keep triggering the focused button
@@ -468,10 +497,11 @@ function drawPlayer(p, now) {
   const breath = walking ? 0 : Math.floor((now + p.breathPhase) / 700) % 2;
   if (now > p.blinkAt + 140) p.blinkAt = now + 2000 + Math.random() * 4000;
   const blink = now > p.blinkAt;
+  const wave = now < p.waveUntil ? 1 + (Math.floor(now / 150) % 2) : 0;
   const riding = p.bike !== null;
   const { canvas: sprite, flip } = riding
-    ? getRiderSprite(p.look, p.dir, frame, breath, blink, p.bike)
-    : getCharacterSprite(p.look, p.dir, frame, breath, blink);
+    ? getRiderSprite(p.look, p.dir, frame, breath, blink, p.bike, wave)
+    : getCharacterSprite(p.look, p.dir, frame, breath, blink, wave);
   const w = riding ? RIDE_W : CHAR_W;
   const h = riding ? RIDE_H : CHAR_H;
 
@@ -509,6 +539,22 @@ function drawMarker(now) {
     ctx.fillStyle = '#FCDD09';
     ctx.fillRect(cx - (sx > 0 ? 2 : 0), cy, 3, 1);
     ctx.fillRect(cx, cy - (sy > 0 ? 2 : 0), 1, 3);
+  }
+}
+
+/** High-five clap: yellow pixel rays bursting outward. */
+function drawSparks(now) {
+  sparks = sparks.filter((s) => now - s.start < SPARK_MS);
+  for (const s of sparks) {
+    const r = 2 + Math.round(((now - s.start) / SPARK_MS) * 6);
+    const x = Math.round(s.x);
+    const y = Math.round(s.y);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + dx * r - 1, y + dy * r - 1, 3, 3);
+      ctx.fillStyle = '#FCDD09';
+      ctx.fillRect(x + dx * r, y + dy * r, 1, 1);
+    }
   }
 }
 
@@ -626,6 +672,7 @@ function render(now) {
     if (item.player) drawPlayer(item.player, now);
     else ctx.drawImage(item.sprite, item.x, item.y);
   }
+  drawSparks(now);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));

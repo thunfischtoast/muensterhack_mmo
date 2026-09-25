@@ -113,17 +113,18 @@ const charCache = new Map();
  * @param {number} frame walk frame 0-3 (0 when standing)
  * @param {number} breath 0/1 idle breathing offset
  * @param {boolean} blink eyes closed
+ * @param {number} wave 0 = arms down, 1/2 = waving frames
  * @returns {{canvas: HTMLCanvasElement, flip: boolean}}
  */
-export function getCharacterSprite(look, dir, frame, breath, blink) {
+export function getCharacterSprite(look, dir, frame, breath, blink, wave = 0) {
   const flip = dir === 'left';
   const view = flip ? 'right' : dir;
-  const key = `${look}|${view}|${frame}|${breath}|${blink ? 1 : 0}`;
+  const key = `${look}|${view}|${frame}|${breath}|${blink ? 1 : 0}|${wave}`;
   let canvas = charCache.get(key);
   if (!canvas) {
     let ctx;
     [canvas, ctx] = makeCanvas(CHAR_W, CHAR_H);
-    drawCharacter(ctx, LOOKS[look % LOOKS.length], view, frame, breath, blink);
+    drawCharacter(ctx, LOOKS[look % LOOKS.length], view, frame, breath, blink, false, wave);
     charCache.set(key, canvas);
   }
   return { canvas, flip };
@@ -133,7 +134,7 @@ export function getCharacterSprite(look, dir, frame, breath, blink) {
  * Draw one character frame; the outline is added automatically around the silhouette.
  * When riding, only the hips are drawn (legs belong to the bike sprite) and the arms reach for the handlebar.
  */
-function drawCharacter(ctx, L, view, frame, breath, blink, riding = false) {
+function drawCharacter(ctx, L, view, frame, breath, blink, riding = false, wave = 0) {
   const stride = frame % 2 === 1;
   // The upper body dips 1px on stride frames and while breathing out.
   const u = stride || breath ? 1 : 0;
@@ -179,7 +180,15 @@ function drawCharacter(ctx, L, view, frame, breath, blink, riding = false) {
 
   // Arms swing opposite to each other while walking.
   const swing = riding ? 0 : frame === 1 ? 1 : frame === 3 ? -1 : 0;
-  if (view === 'right' && riding) {
+  if (wave) {
+    // One arm raised above the head, the hand moving back and forth
+    rect(ctx, L.shirt, 12, 7 + u, 1, 4);
+    rect(ctx, L.skin, 12 + wave - 1, 5 + u, 1, 2);
+    if (view !== 'right') {
+      rect(ctx, L.shirt, 3, 10 + u, 1, 3);
+      rect(ctx, L.skin, 3, 13 + u, 1, 2);
+    }
+  } else if (view === 'right' && riding) {
     line(ctx, L.skin, 8, 13 + u, 11, 14 + u);
   } else if (view === 'right') {
     rect(ctx, L.skin, 7 + swing * 2, 13 + u, 2, 2);
@@ -612,24 +621,24 @@ const riderCache = new Map();
  * @param {number} bike color index of the bike
  * @param {number} frame pedal frame 0-3
  */
-export function getRiderSprite(look, dir, frame, breath, blink, bike) {
+export function getRiderSprite(look, dir, frame, breath, blink, bike, wave = 0) {
   const flip = dir === 'left';
   const view = flip ? 'right' : dir;
-  const key = `${look}|${view}|${frame}|${breath}|${blink ? 1 : 0}|${bike}`;
+  const key = `${look}|${view}|${frame}|${breath}|${blink ? 1 : 0}|${bike}|${wave}`;
   let canvas = riderCache.get(key);
   if (!canvas) {
     let ctx;
     [canvas, ctx] = makeCanvas(RIDE_W, RIDE_H);
-    drawRider(ctx, LOOKS[look % LOOKS.length], view, frame, breath, blink, BIKE_COLORS[bike % BIKE_COLORS.length]);
+    drawRider(ctx, LOOKS[look % LOOKS.length], view, frame, breath, blink, BIKE_COLORS[bike % BIKE_COLORS.length], wave);
     riderCache.set(key, canvas);
   }
   return { canvas, flip };
 }
 
 /** Compose bike, pedaling legs and the (leg-less) character into one rider frame. */
-function drawRider(ctx, L, view, frame, breath, blink, color) {
+function drawRider(ctx, L, view, frame, breath, blink, color, wave) {
   const [body, bodyCtx] = makeCanvas(CHAR_W, CHAR_H);
-  drawCharacter(bodyCtx, L, view, frame, breath, blink, true);
+  drawCharacter(bodyCtx, L, view, frame, breath, blink, true, wave);
   const legColor = L.shortPants ? L.skin : L.pants;
 
   if (view === 'right') {

@@ -28,6 +28,8 @@ const DIRS = new Set(['down', 'up', 'left', 'right']);
 const MAX_NAME = 16;
 const MAX_CHAT = 120;
 const CHAT_COOLDOWN_MS = 500;
+const WAVE_COOLDOWN_MS = 1000;
+const HIGH_FIVE_RANGE = 20; // pixels between feet for a wave to become a high five
 const TICK_MS = 100;
 const HEARTBEAT_MS = 30000;
 const MAX_PAYLOAD = 1024;
@@ -164,6 +166,7 @@ export function startServer(port = 3000) {
           moving: false,
           bike: null,
           lastChat: 0,
+          lastWave: 0,
         };
         ws.player = player;
         players.set(player.id, player);
@@ -187,6 +190,20 @@ export function startServer(port = 3000) {
         if (!text) return;
         p.lastChat = now;
         broadcast({ t: 'chat', id: p.id, text });
+      } else if (msg.t === 'wave') {
+        const now = Date.now();
+        if (now - p.lastWave < WAVE_COOLDOWN_MS) return;
+        p.lastWave = now;
+        let partner = null;
+        let best = HIGH_FIVE_RANGE;
+        for (const other of players.values()) {
+          const d = Math.hypot(other.x - p.x, other.y - p.y);
+          if (other !== p && d <= best) {
+            partner = other;
+            best = d;
+          }
+        }
+        broadcast({ t: 'wave', id: p.id, with: partner ? partner.id : null });
       }
     });
 
