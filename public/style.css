@@ -1,0 +1,260 @@
+/* MS HACK Plaza: Münsterhack look (red/yellow/black/white, Share Tech Mono, pixel borders). */
+
+/* Self-hosted (SIL OFL, see fonts/OFL.txt) so no visitor data goes to Google (DSGVO). */
+@font-face {
+  font-family: 'Share Tech Mono';
+  src: url('fonts/ShareTechMono-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --red: #DA121A;
+  --yellow: #FCDD09;
+  --black: #000;
+  --white: #FFF;
+  --navy: #2C3E50;
+  --navy-dark: #1a252f;
+  --px: 4px;
+}
+
+[hidden] { display: none !important; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--navy-dark);
+  color: var(--black);
+  font-family: 'Share Tech Mono', monospace;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  display: block;
+  touch-action: none;
+  image-rendering: pixelated;
+}
+
+/* Notched pixel border: four hard shadows instead of a rounded border. */
+.pixel-box {
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--black),
+    0 var(--px) 0 0 var(--black),
+    calc(-1 * var(--px)) 0 0 0 var(--black),
+    var(--px) 0 0 0 var(--black);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(26, 37, 47, 0.55);
+  overflow-y: auto;
+}
+
+.panel {
+  width: 100%;
+  max-width: 340px;
+  padding: 20px 20px 16px;
+  background: var(--white);
+  text-align: center;
+}
+
+/* Logo recreated in CSS: stepped red shield, yellow "10 JAHRE" banner. */
+.logo {
+  position: relative;
+  width: 150px;
+  margin: 0 auto 8px;
+  padding-top: 14px;
+}
+
+.logo-shield {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 0 26px;
+  background: var(--red);
+  color: var(--white);
+  line-height: 1;
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 92% 72%, 92% 80%, 84% 80%, 84% 88%, 68% 88%, 68% 94%, 56% 94%, 56% 100%,
+    44% 100%, 44% 94%, 32% 94%, 32% 88%, 16% 88%, 16% 80%, 8% 80%, 8% 72%, 0 72%);
+}
+
+.logo-ms {
+  font-size: 64px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 3px 0 0 var(--white);
+}
+
+.logo-hack {
+  font-size: 26px;
+  letter-spacing: 10px;
+  margin-right: -10px;
+}
+
+.logo-year {
+  margin-top: 6px;
+  font-size: 26px;
+  color: var(--yellow);
+  letter-spacing: 4px;
+  text-shadow: 2px 0 0 var(--yellow);
+}
+
+.logo-banner {
+  position: absolute;
+  left: -14px;
+  right: -14px;
+  top: 0;
+  padding: 3px 0;
+  background: var(--yellow);
+  font-size: 16px;
+  letter-spacing: 2px;
+  clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%);
+}
+
+h1 {
+  margin: 8px 0 4px;
+  font-size: 22px;
+  font-weight: normal;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+
+.intro {
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+#login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+label {
+  font-size: 14px;
+}
+
+input, button {
+  font: inherit;
+  font-size: 16px; /* 16px prevents iOS from zooming into focused inputs */
+  border: 0;
+  border-radius: 0;
+  outline: none;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  background: var(--white);
+  box-shadow: inset 0 0 0 3px var(--black);
+}
+
+input:focus {
+  box-shadow: inset 0 0 0 3px var(--black), inset 0 0 0 6px var(--yellow);
+}
+
+#join-button {
+  padding: 12px;
+  background: var(--red);
+  color: var(--yellow);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 3px var(--black), 4px 4px 0 var(--black);
+}
+
+#join-button:hover,
+#join-button:focus-visible {
+  background: var(--yellow);
+  color: var(--black);
+}
+
+#join-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: inset 0 0 0 3px var(--black), 2px 2px 0 var(--black);
+}
+
+#join-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--navy);
+}
+
+.hint-touch { display: none; }
+
+@media (hover: none) and (pointer: coarse) {
+  .hint-touch { display: block; }
+  .hint-desktop { display: none; }
+}
+
+#hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  pointer-events: none;
+}
+
+#count {
+  padding: 4px 8px;
+  background: var(--black);
+  color: var(--yellow);
+  font-size: 14px;
+}
+
+#notice {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Top of the screen: at the bottom, iOS/Android soft keyboards would cover the input. */
+#chat-form {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  top: calc(12px + env(safe-area-inset-top));
+  z-index: 5;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+#chat-button {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 3px var(--black), 4px 4px 0 var(--black);
+}
+
+#chat-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: inset 0 0 0 3px var(--black), 2px 2px 0 var(--black);
+}

@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- MS HACK Plaza: single-page client; all game logic lives in game.js. -->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#DA121A">
+  <title>MS HACK Plaza</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" hidden>
+    <div id="count" class="pixel-box">0 online</div>
+  </div>
+  <div id="notice" class="pixel-box" hidden>Verbindung verloren – neu verbinden…</div>
+
+  <form id="chat-form" hidden>
+    <input id="chat-input" type="text" maxlength="120" autocomplete="off" enterkeyhint="send"
+           placeholder="Nachricht… (Enter senden, Esc abbrechen)" aria-label="Chatnachricht">
+  </form>
+  <button id="chat-button" type="button" aria-label="Chat öffnen" hidden>
+    <svg viewBox="0 0 12 12" width="28" height="28" shape-rendering="crispEdges" aria-hidden="true">
+      <path fill="#000" d="M1 1h10v1h1v6h-1v1H6v1H5v1H4v1H3V9H1V8H0V2h1z"/>
+      <path fill="#FCDD09" d="M1 2h10v6H4v2H3V8H1z"/>
+      <path fill="#000" d="M3 4h1v2H3zM6 4h1v2H6zM9 4h1v2H9z"/>
+    </svg>
+  </button>
+
+  <div id="login" class="overlay">
+    <div class="panel pixel-box">
+      <div class="logo" aria-label="MS HACK 2026, 10 Jahre">
+        <div class="logo-shield">
+          <span class="logo-ms">MS</span>
+          <span class="logo-hack">HACK</span>
+          <span class="logo-year">2026</span>
+        </div>
+        <div class="logo-banner">10 JAHRE</div>
+      </div>
+      <h1>Plaza</h1>
+      <p class="intro">Lauf über den Prinzipalmarkt und quatsch mit den anderen.</p>
+      <form id="login-form">
+        <label for="name-input">Dein Name</label>
+        <input id="name-input" type="text" maxlength="16" autocomplete="nickname" required placeholder="z. B. Leezenheld">
+        <button id="join-button" type="submit">Los geht's</button>
+      </form>
+      <p class="hint hint-desktop">WASD / Pfeiltasten oder Klick: laufen<br>Enter: chatten</p>
+      <p class="hint hint-touch">Tippen: laufen<br>Sprechblase unten rechts: chatten</p>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
