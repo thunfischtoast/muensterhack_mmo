@@ -10,6 +10,7 @@ import {
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
 } from './sprites.js';
 import { findPath } from './path.js';
+import { ACHIEVEMENTS, unlock, progress, progressCount, isUnlocked, unlockedCount } from './achievements.js';
 
 const SPEED = 72; // pixels per second
 const RIDE_SPEED = 140;
@@ -55,6 +56,9 @@ const taskStatusEl = document.getElementById('task-status');
 const toastEl = document.getElementById('toast');
 const infoEl = document.getElementById('info');
 const infoNameEl = document.getElementById('info-name');
+const trophyButton = document.getElementById('trophy-button');
+const trophyPanel = document.getElementById('trophies');
+const trophyList = document.getElementById('trophy-list');
 const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
@@ -107,6 +111,7 @@ let myCarry = null; // id of the loose bike the own player carries
 let taskText = '';
 let toastTimer = 0;
 let infoText = '';
+let trophyText = '';
 let pipeIn = 0; // seconds until the next puff from the Kiepenkerl's pipe
 let fishSplash = { n: -1, end: true }; // which fish jump already splashed
 let prevRideY = null; // own y in the previous frame, to detect crossing the traffic light
@@ -191,6 +196,7 @@ function handleMessage(msg) {
         me.bike = previous.bike;
       }
       applyLeezen(msg.leezen, true);
+      updateTrophyButton();
       lastSent = '';
       loginEl.hidden = true;
       noticeEl.hidden = true;
@@ -231,6 +237,7 @@ function handleMessage(msg) {
         p.dir = dirFor(partner.x - p.x, partner.y - p.y);
         partner.dir = dirFor(p.x - partner.x, p.y - partner.y);
         sparks.push({ x: (p.x + partner.x) / 2, y: (p.y + partner.y) / 2 - 16, start: now });
+        if (msg.id === myId || msg.with === myId) achieve('highfive');
       }
       break;
     }
@@ -306,6 +313,19 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
+trophyButton.addEventListener('click', () => {
+  renderTrophies();
+  trophyPanel.hidden = false;
+  trophyButton.blur();
+});
+document.getElementById('trophy-close').addEventListener('click', () => { trophyPanel.hidden = true; });
+trophyPanel.addEventListener('pointerdown', (event) => {
+  if (event.target === trophyPanel) trophyPanel.hidden = true; // click on the dimmed backdrop
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') trophyPanel.hidden = true;
+});
+
 window.addEventListener('keyup', (event) => {
   const dir = KEY_DIRS[event.code];
   if (dir) keys.delete(dir);
@@ -316,7 +336,10 @@ window.addEventListener('blur', () => keys.clear());
 chatForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
-  if (text) send({ t: 'chat', text });
+  if (text) {
+    send({ t: 'chat', text });
+    achieve('chat');
+  }
   chatInput.value = '';
   closeChat();
 });
@@ -414,6 +437,7 @@ function applyLeezen(state, initial) {
     if (me) me.bike = null;
     const count = (slots) => slots.filter((c) => c !== null).length;
     const left = state.slots.length - count(state.slots);
+    if (prev && count(state.slots) > count(prev.slots)) achieve('parker');
     if (prev && count(state.slots) > count(prev.slots) && left > 0) {
       showToast(`Geparkt! Noch ${left} ${left === 1 ? 'Leeze' : 'Leezen'}.`);
     }
@@ -427,6 +451,7 @@ function applyLeezen(state, initial) {
 /** Round complete: banner for everyone and confetti over the rack. */
 function celebrate() {
   showToast('Münster ist aufgeräumt! Danke!', 6000);
+  achieve('cleared');
   const cx = (RACK_SLOTS[0].x + RACK_SLOTS[RACK_SLOTS.length - 1].x) / 2;
   const colors = ['#DA121A', '#FCDD09', '#FFFFFF'];
   for (let i = 0; i < 90; i++) {
@@ -464,6 +489,11 @@ function updateInfo(me) {
     const dy = me.y - Math.min(s.y1, Math.max(s.y0, me.y));
     return Math.hypot(dx, dy) <= INFO_REACH;
   });
+  if (spot) {
+    achieve('history', spot.name);
+    if (spot === AICHHOERNCHEN) achieve('squirrel');
+    if (spot.name === 'Corndex') achieve('kiosk');
+  }
   const text = spot ? spot.name + ' · ' + spot.year : '';
   if (text === infoText) return;
   infoText = text;
@@ -617,6 +647,7 @@ function update(dt, now) {
   updateTask();
   updateInfo(me);
   checkGreenWave(me, now);
+  checkAchievements(me);
 
   for (const p of players.values()) {
     if (p.id === myId) continue;
@@ -786,6 +817,72 @@ function drawLeezenHints(now) {
   tri(4, '#FCDD09');
 }
 
+/** Unlock or advance an achievement; the first time it completes, celebrate with a banner and confetti. */
+function achieve(id, step) {
+  const done = step === undefined ? unlock(id) : progress(id, step);
+  if (!done) return;
+  updateTrophyButton();
+  if (!trophyPanel.hidden) renderTrophies();
+  // Let a toast that is already showing (e.g. "Grüne Welle!") be read first
+  setTimeout(() => showToast('🏆 Erfolg freigeschaltet: ' + done.name, 4500), toastEl.hidden ? 0 : 1800);
+  const me = players.get(myId);
+  if (!me) return;
+  for (let i = 0; i < 24; i++) {
+    emit(me.x, me.y - 24, (Math.random() - 0.5) * 60, -30 - Math.random() * 40, 1, i % 2 ? '#FCDD09' : '#FFFFFF', 2, 90);
+  }
+}
+
+/** Trophy button label: unlocked / total; touch the DOM only on changes. */
+function updateTrophyButton() {
+  const text = '🏆 ' + unlockedCount() + '/' + ACHIEVEMENTS.length;
+  if (text === trophyText) return;
+  trophyText = text;
+  trophyButton.textContent = text;
+}
+
+/** Fill the achievements panel: unlocked ones with description, locked ones with a hint (and progress). */
+function renderTrophies() {
+  trophyList.replaceChildren(...ACHIEVEMENTS.map((a) => {
+    const li = document.createElement('li');
+    const done = isUnlocked(a.id);
+    const name = document.createElement('div');
+    name.className = 'trophy-name';
+    name.textContent = done ? '🏆 ' + a.name : '🔒 ???';
+    const desc = document.createElement('div');
+    desc.textContent = (done ? a.desc : a.hint) + (a.goal && !done ? ' (' + progressCount(a.id) + '/' + a.goal + ')' : '');
+    if (!done) li.className = 'locked';
+    li.append(name, desc);
+    return li;
+  }));
+}
+
+/** Named area of a tile for "Stadtbummel", or null. */
+function areaAt(tx, ty) {
+  const g = GROUND[ty]?.[tx];
+  if (g === 't' || g === 'j') return 'aasee';
+  if (tx >= 34) return ty <= 18 ? 'promenade' : null;
+  if (g === 'c') return tx >= 24 && ty <= 12 ? 'lamberti' : 'prinzipalmarkt';
+  if (ty >= 19 && tx <= 13) return 'park';
+  return null;
+}
+
+/** Per-frame achievement checks that depend on where the own player stands and what is happening there. */
+function checkAchievements(me) {
+  const tx = Math.floor(me.x / TILE);
+  const ty = Math.floor((me.y - 1) / TILE);
+  const area = areaAt(tx, ty);
+  if (area) achieve('stroll', area);
+  if (me.bike !== null) achieve('bike');
+  if (GROUND[ty]?.[tx] === 'j' && GROUND[ty + 1]?.[tx] === '~') achieve('jetty');
+  if (Math.hypot(me.x - (CAT.x + 7), me.y - CAT.y) < 40) achieve('cat');
+  const t = wallTime();
+  if (t % 90 < 8 && Math.hypot(me.x - (TOWER_X + 24), me.y - (TOWER.y + TOWER.h) * TILE) < 112) achieve('keeper');
+  const houseX = BANNER_HOUSE.x * TILE;
+  if ((t + 30) % 60 < 6 && me.x > houseX - 8 && me.x < houseX + BANNER_HOUSE.w * TILE + 8 && me.y < 8 * TILE) {
+    achieve('mascot');
+  }
+}
+
 /** Small bobbing red "?" over every object (and the squirrel) that references an earlier Münsterhack project. */
 function drawInfoMarkers(now) {
   const bob = Math.round(Math.sin(now / 250 + 1) * 1.5);
@@ -909,6 +1006,7 @@ function checkGreenWave(me, now) {
   if (me.bike !== null && onPath && crossed && lightIsGreen() && now - lastGreenWave > 10000) {
     lastGreenWave = now;
     showToast('Grüne Welle! 🚲');
+    achieve('greenwave');
   }
   prevRideY = me.y;
 }

@@ -261,6 +261,67 @@ input:focus {
   letter-spacing: 1px;
 }
 
+#trophy-button {
+  display: block;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: var(--yellow);
+  color: var(--black);
+  font-size: 13px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.trophy-panel {
+  position: relative;
+  max-width: 420px;
+  text-align: left;
+}
+
+.trophy-panel h2 {
+  margin: 0 0 10px;
+  color: var(--red);
+  font-size: 20px;
+  font-weight: normal;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+#trophy-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--red);
+  color: var(--white);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px var(--black);
+}
+
+#trophy-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+#trophy-list li {
+  padding: 6px 0;
+  border-bottom: 2px dashed #ddd;
+  font-size: 14px;
+}
+
+#trophy-list .trophy-name {
+  font-size: 15px;
+}
+
+#trophy-list .locked {
+  color: #777;
+}
+
 #toast {
   position: fixed;
   left: 50%;

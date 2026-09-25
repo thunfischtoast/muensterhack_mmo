@@ -19,6 +19,7 @@
       <div class="task-title">Leezen-Chaos</div>
       <div id="task-status"></div>
     </div>
+    <button id="trophy-button" class="pixel-box" type="button" aria-label="Erfolge anzeigen">🏆 0/0</button>
   </div>
   <div id="toast" class="pixel-box" hidden></div>
   <div id="info" class="pixel-box" hidden>
@@ -45,6 +46,14 @@
       <path fill="#000" d="M3 4h1v2H3zM6 4h1v2H6zM9 4h1v2H9z"/>
     </svg>
   </button>
+
+  <div id="trophies" class="overlay" hidden>
+    <div class="panel pixel-box trophy-panel">
+      <button id="trophy-close" type="button" aria-label="Schließen">✕</button>
+      <h2>Erfolge</h2>
+      <ul id="trophy-list"></ul>
+    </div>
+  </div>
 
   <div id="login" class="overlay">
     <div class="panel pixel-box">

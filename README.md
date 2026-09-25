@@ -52,6 +52,10 @@ Small nods to projects from [codeformuenster/muensterhack](https://github.com/co
 
 More small things to spot: the Lamberti clock shows the real time, the tower keeper blows her horn every few minutes, the Münsterhack mascot waves from a window now and then, a cat naps in an arcade, fish jump in the Aasee, the Kiepenkerl smokes his pipe, and riding through the green bike light gets you a "Grüne Welle!".
 
+## Achievements
+
+14 small achievements (chatting, high fives, riding, Leezen-Chaos, visiting every area, finding the easter eggs …) reward exploring. The trophy button under the task panel lists them; locked ones show a hint. Progress is stored in the browser (localStorage), not on the server.
+
 ## Configuration
 
 - `PORT`: HTTP and WebSocket port (default `3000`).
