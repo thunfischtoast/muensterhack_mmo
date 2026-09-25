@@ -20,6 +20,7 @@ const BUBBLE_FADE_MS = 500;
 const WAVE_MS = 1200;
 const SPARK_MS = 400;
 const MAX_PARTICLES = 200;
+const INFO_REACH = 20; // pixels from the feet to an object's footprint to show its project info
 const TOAST_MS = 3500;
 /** Dust colors per ground type (see GROUND in map.js). */
 const DUST_COLORS = {
@@ -52,6 +53,8 @@ const bikeButton = document.getElementById('bike-button');
 const waveButton = document.getElementById('wave-button');
 const taskStatusEl = document.getElementById('task-status');
 const toastEl = document.getElementById('toast');
+const infoEl = document.getElementById('info');
+const infoNameEl = document.getElementById('info-name');
 const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
@@ -68,6 +71,17 @@ const objectEntries = OBJECTS.map((o) => {
     y: (o.y + o.h) * TILE - sprites[0].height,
   };
 });
+
+// References to earlier Münsterhack projects: footprint for the proximity check and a "?" marker spot.
+const infoSpots = OBJECTS.filter((o) => o.info).map((o) => ({
+  ...o.info,
+  x0: o.x * TILE,
+  y0: o.y * TILE,
+  x1: (o.x + o.w) * TILE,
+  y1: (o.y + o.h) * TILE,
+  markX: (o.x + o.w / 2) * TILE,
+  markY: (o.y + o.h) * TILE - Math.min(getObjectSprite(o).height, 48) - 12,
+}));
 
 const players = new Map();
 const keys = new Set();
@@ -92,6 +106,7 @@ let leezenAt = 0; // when it arrived, to count down resetIn locally
 let myCarry = null; // id of the loose bike the own player carries
 let taskText = '';
 let toastTimer = 0;
+let infoText = '';
 
 // ---------------------------------------------------------------------------
 // Networking
@@ -437,6 +452,20 @@ function updateTask() {
   taskStatusEl.textContent = text;
 }
 
+/** Show name and year of a referenced project while standing next to it; touch the DOM only on changes. */
+function updateInfo(me) {
+  const spot = infoSpots.find((s) => {
+    const dx = me.x - Math.min(s.x1, Math.max(s.x0, me.x));
+    const dy = me.y - Math.min(s.y1, Math.max(s.y0, me.y));
+    return Math.hypot(dx, dy) <= INFO_REACH;
+  });
+  const text = spot ? spot.name + ' · ' + spot.year : '';
+  if (text === infoText) return;
+  infoText = text;
+  infoNameEl.textContent = text;
+  infoEl.hidden = !text;
+}
+
 /** Add a fading pixel particle (optionally falling with gravity g); the oldest is dropped at the cap. */
 function emit(x, y, vx, vy, life, color, size = 1, g = 0) {
   if (particles.length >= MAX_PARTICLES) particles.shift();
@@ -580,6 +609,7 @@ function update(dt, now) {
   me.walkTime = me.moving ? me.walkTime + dt : 0;
   updateBikeButton(me);
   updateTask();
+  updateInfo(me);
 
   for (const p of players.values()) {
     if (p.id === myId) continue;
@@ -749,6 +779,24 @@ function drawLeezenHints(now) {
   tri(4, '#FCDD09');
 }
 
+/** Small bobbing red "?" over every object that references an earlier Münsterhack project. */
+function drawInfoMarkers(now) {
+  const bob = Math.round(Math.sin(now / 250 + 1) * 1.5);
+  for (const s of infoSpots) {
+    const x = Math.round(s.markX) - 3;
+    const y = Math.round(s.markY) + bob;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 1, y - 1, 9, 11);
+    ctx.fillStyle = '#DA121A';
+    ctx.fillRect(x, y, 7, 9);
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(x + 2, y + 1, 3, 1);
+    ctx.fillRect(x + 4, y + 2, 1, 2);
+    ctx.fillRect(x + 3, y + 4, 1, 2);
+    ctx.fillRect(x + 3, y + 7, 1, 1);
+  }
+}
+
 /** High-five clap: yellow pixel rays bursting outward. */
 function drawSparks(now) {
   sparks = sparks.filter((s) => now - s.start < SPARK_MS);
@@ -901,6 +949,7 @@ function render(now) {
   ctx.globalAlpha = 1;
   drawSparks(now);
   drawLeezenHints(now);
+  drawInfoMarkers(now);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));

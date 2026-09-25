@@ -55,16 +55,32 @@ export const GROUND = [
   '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
 ];
 
+/** Earlier Münsterhack projects referenced in the world (see README). */
+const PROJECTS = {
+  leihleeze: { name: 'Leihleeze', year: '2017' },
+  hackatonne: { name: 'Hack(a)Tonne', year: '2018' },
+  krautUndRueben: { name: 'Kraut und Rüben / MüMa', year: '2019 / 2024' },
+  leezenflow: { name: 'Grüne Welle / Leezenflow', year: '2019' },
+  humiditree: { name: 'Humiditree', year: '2019' },
+  givebox: { name: 'Givebox Network / Kiepenkiste', year: '2022 / 2025' },
+  reloaded1648: { name: '1648_reloaded', year: '2023' },
+  corndex: { name: 'Corndex', year: '2024' },
+  nestflix: { name: 'Nestflix', year: '2025' },
+};
+
 /**
  * World objects. x/y/w/h is the solid footprint in tiles; the sprite is drawn
  * bottom-aligned and horizontally centered on it and may extend above it.
- * `v` selects a variant (house facade, bike colors, tree kind, stall awning).
+ * `v` selects a variant (house facade, bike colors, tree kind, stall awning); `info` marks a
+ * reference to an earlier Münsterhack project, shown to players who walk up to it.
  */
 export const OBJECTS = [
   // Backdrop: the two west towers of St.-Paulus-Dom peeking out behind the gables
   { type: 'dom', x: 7, y: 0, w: 6, h: 2 },
   // Prinzipalmarkt: gabled merchant houses with arcades; v = 5 is the historic town hall
-  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({ type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i })),
+  ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({
+    type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i, info: i === 5 ? PROJECTS.reloaded1648 : undefined,
+  })),
   // St. Lamberti: nave behind the tower, Lambertibrunnen in front
   { type: 'church', x: 28, y: 3, w: 6, h: 3 },
   { type: 'tower', x: 30, y: 6, w: 3, h: 2 },
@@ -97,10 +113,12 @@ export const OBJECTS = [
   { type: 'poolballs', x: 15, y: 20, w: 3, h: 2 },
   // Promenade: linden trees on both sides of the bike path, blue bike-path signs, Buddenturm
   // The tree at y 7 carries a Nestflix nest box (Münsterhack 2025)
-  ...[1, 4, 7, 10, 13].map((y) => ({ type: 'tree', x: 38, y, w: 1, h: 1, v: 0, deco: y === 7 ? 'nestbox' : undefined })),
+  ...[1, 4, 7, 10, 13].map((y) => (y === 7
+    ? { type: 'tree', x: 38, y, w: 1, h: 1, v: 0, deco: 'nestbox', info: PROJECTS.nestflix }
+    : { type: 'tree', x: 38, y, w: 1, h: 1, v: 0 })),
   ...[1, 4, 7, 10].map((y) => ({ type: 'tree', x: 35, y, w: 1, h: 1, v: 0 })),
   // Leezenflow (Münsterhack 2019): counts down the phase of the bike traffic light further along the path
-  { type: 'leezenflow', x: 35, y: 13, w: 1, h: 1 },
+  { type: 'leezenflow', x: 35, y: 13, w: 1, h: 1, info: PROJECTS.leezenflow },
   { type: 'bikelight', x: 35, y: 17, w: 1, h: 1 },
   { type: 'bikesign', x: 34, y: 5, w: 1, h: 1 },
   { type: 'bikesign', x: 34, y: 14, w: 1, h: 1 },
@@ -108,17 +126,19 @@ export const OBJECTS = [
   // Park by the Aasee
   ...[[2, 21], [9, 21], [5, 23], [12, 24], [3, 26], [8, 27], [11, 28], [4, 17], [27, 17], [30, 17]].map(
     // Two lindens wear Humiditree watering bags (Münsterhack 2019)
-    ([x, y], i) => ({ type: 'tree', x, y, w: 1, h: 1, v: i % 3, deco: i % 3 === 0 && y < 25 ? 'bag' : undefined }),
+    ([x, y], i) => (i % 3 === 0 && y < 25
+      ? { type: 'tree', x, y, w: 1, h: 1, v: 0, deco: 'bag', info: PROJECTS.humiditree }
+      : { type: 'tree', x, y, w: 1, h: 1, v: i % 3 }),
   ),
   ...[[6, 21], [1, 24], [13, 27], [7, 17], [10, 23]].map(([x, y]) => ({ type: 'bush', x, y, w: 1, h: 1 })),
   { type: 'flowers', x: 9, y: 16, w: 2, h: 1 },
   { type: 'flowers', x: 18, y: 16, w: 2, h: 1 },
   // Easter eggs for earlier Münsterhack projects
-  { type: 'buoy', x: 19, y: 27, w: 1, h: 1 }, // Hack(a)Tonne 2018
-  { type: 'givebox', x: 8, y: 11, w: 1, h: 1 }, // Givebox Network 2022 / Kiepenkiste 2025
-  { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1 }, // Leihleeze 2017
-  { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1 }, // Kraut und Rüben 2019 / MüMa 2024
-  { type: 'kiosk', x: 34, y: 20, w: 3, h: 1 }, // Corndex 2024
+  { type: 'buoy', x: 16, y: 26, w: 1, h: 1, info: PROJECTS.hackatonne },
+  { type: 'givebox', x: 8, y: 11, w: 1, h: 1, info: PROJECTS.givebox },
+  { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1, info: PROJECTS.leihleeze },
+  { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1, info: PROJECTS.krautUndRueben },
+  { type: 'kiosk', x: 34, y: 20, w: 3, h: 1, info: PROJECTS.corndex },
   // Aasee: pedal boats moored at the jetty
   { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
   { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },

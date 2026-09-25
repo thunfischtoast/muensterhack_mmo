@@ -37,7 +37,7 @@ A gust of wind knocked over 6 Leezen on the plaza (marked with a yellow "!"). Pi
 
 ## Easter eggs: earlier Münsterhack projects
 
-Small nods to projects from [codeformuenster/muensterhack](https://github.com/codeformuenster/muensterhack):
+Small nods to projects from [codeformuenster/muensterhack](https://github.com/codeformuenster/muensterhack). Each has a red "?" above it; walking up to it shows the project name and year:
 
 - **Leihleeze** (2017): green sign at the bike rack on the plaza
 - **Hack(a)Tonne** (2018): water-quality probe floating in the Aasee

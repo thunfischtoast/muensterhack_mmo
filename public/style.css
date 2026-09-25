@@ -276,6 +276,30 @@ input:focus {
   pointer-events: none;
 }
 
+#info {
+  position: fixed;
+  left: 50%;
+  bottom: 216px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 6px 14px;
+  background: var(--white);
+  text-align: center;
+  box-shadow: inset 0 0 0 3px var(--black), 4px 4px 0 var(--black);
+  pointer-events: none;
+}
+
+.info-label {
+  color: var(--red);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#info-name {
+  font-size: 16px;
+}
+
 #notice {
   position: fixed;
   top: 12px;
