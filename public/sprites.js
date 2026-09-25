@@ -1018,6 +1018,49 @@ function drawBoat(ctx, v, f) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
+/**
+ * Leezenflow (born at Münsterhack 2019): LED panel on a pole before the bike traffic light,
+ * its bar shrinking with the time left in the current green or red phase, 16x40.
+ */
+function drawLeezenflow(ctx, f) {
+  const half = SIGNAL_FRAMES / 2;
+  const green = f < half;
+  const left = half - (f % half); // LEDs still lit, one goes out per frame
+  rect(ctx, '#666', 7, 18, 2, 22);
+  rect(ctx, '#1c1c1c', 1, 2, 14, 16);
+  addOutline(ctx.canvas);
+  rect(ctx, '#333', 1, 2, 14, 1);
+  // Bicycle icon above the LED bar
+  rect(ctx, WHITE, 4, 7, 2, 1);
+  rect(ctx, WHITE, 10, 7, 2, 1);
+  rect(ctx, WHITE, 6, 5, 4, 1);
+  rect(ctx, WHITE, 7, 6, 1, 1);
+  rect(ctx, WHITE, 9, 4, 1, 2);
+  // LED bar: 10 columns, lit from the left
+  for (let i = 0; i < 10; i++) {
+    const on = i < left;
+    rect(ctx, on ? (green ? '#3cf06a' : '#ff3a3a') : '#3a3a3a', 3 + i, 10, 1, 4);
+  }
+  rect(ctx, '#1c1c1c', 3, 12, 10, 1);
+  // Münsterhack sticker on the pole
+  rect(ctx, RED, 7, 24, 2, 3);
+  rect(ctx, YELLOW, 7, 24, 2, 1);
+}
+
+/** Bike traffic light the Leezenflow counts down to: red on top, green below, 16x40. */
+function drawBikeLight(ctx, f) {
+  const green = f < SIGNAL_FRAMES / 2;
+  rect(ctx, '#666', 7, 18, 2, 22);
+  rect(ctx, '#1c1c1c', 4, 2, 8, 16);
+  addOutline(ctx.canvas);
+  rect(ctx, YELLOW, 4, 18, 8, 1);
+  for (const [y, lit, on, off] of [[4, !green, '#ff3a3a', '#5a1a1a'], [11, green, '#3cf06a', '#1a4a24']]) {
+    rect(ctx, lit ? on : off, 5, y + 1, 6, 4);
+    rect(ctx, lit ? on : off, 6, y, 4, 6);
+    if (lit) rect(ctx, WHITE, 6, y + 1, 1, 1);
+  }
+}
+
 /** Wooden bench, 32x16. */
 function drawBench(ctx) {
   rect(ctx, '#5a3a22', 3, 2, 2, 13);
@@ -1237,13 +1280,24 @@ function drawPoolBalls(ctx) {
 
 const objectCache = new Map();
 
-/** Object types whose sprite changes with the water animation frame. */
-export const ANIMATED_OBJECTS = new Set(['fountain', 'boat']);
+/** Leezenflow and its bike traffic light: green for the first half of the cycle, red for the second. */
+const SIGNAL_FRAMES = 20;
+
+/**
+ * Animated object types: frame count and frame duration in ms. Frames follow the wall clock,
+ * so Leezenflow and the traffic light show the same phase for every player.
+ */
+export const ANIMATED_OBJECTS = {
+  fountain: { frames: WATER_FRAMES, ms: 350 },
+  boat: { frames: WATER_FRAMES, ms: 350 },
+  leezenflow: { frames: SIGNAL_FRAMES, ms: 1000 },
+  bikelight: { frames: SIGNAL_FRAMES, ms: 1000 },
+};
 
 /**
  * Return the cached sprite canvas for a map object.
  * @param {{type: string, w: number, v?: number}} obj
- * @param {number} frame water animation frame, only used by ANIMATED_OBJECTS
+ * @param {number} frame animation frame, only used by ANIMATED_OBJECTS
  * @returns {HTMLCanvasElement}
  */
 export function getObjectSprite(obj, frame = 0) {
@@ -1255,7 +1309,7 @@ export function getObjectSprite(obj, frame = 0) {
     house: [64, 80], tower: [48, 128], church: [96, 96], dom: [96, 32], stand: [48, 40], tree: [32, 40],
     bench: [32, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
-    bush: [16, 16], flowers: [32, 16], boat: [16, 16],
+    bush: [16, 16], flowers: [32, 16], boat: [16, 16], leezenflow: [16, 40], bikelight: [16, 40],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1279,6 +1333,8 @@ export function getObjectSprite(obj, frame = 0) {
     case 'bush': drawBush(ctx); break;
     case 'flowers': drawFlowers(ctx); break;
     case 'boat': drawBoat(ctx, v, frame); break;
+    case 'leezenflow': drawLeezenflow(ctx, frame); break;
+    case 'bikelight': drawBikeLight(ctx, frame); break;
   }
   objectCache.set(key, canvas);
   return canvas;

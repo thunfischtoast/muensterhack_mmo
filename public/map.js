@@ -94,10 +94,11 @@ export const OBJECTS = [
   { type: 'lamp', x: 33, y: 17, w: 1, h: 1 },
   { type: 'poolballs', x: 15, y: 20, w: 3, h: 2 },
   // Promenade: linden trees on both sides of the bike path, blue bike-path signs, Buddenturm
-  ...[1, 4, 7, 10, 13, 16].flatMap((y) => [
-    { type: 'tree', x: 35, y, w: 1, h: 1, v: 0 },
-    ...(y < 16 ? [{ type: 'tree', x: 38, y, w: 1, h: 1, v: 0 }] : []),
-  ]),
+  ...[1, 4, 7, 10, 13].map((y) => ({ type: 'tree', x: 38, y, w: 1, h: 1, v: 0 })),
+  ...[1, 4, 7, 10].map((y) => ({ type: 'tree', x: 35, y, w: 1, h: 1, v: 0 })),
+  // Leezenflow (Münsterhack 2019): counts down the phase of the bike traffic light further along the path
+  { type: 'leezenflow', x: 35, y: 13, w: 1, h: 1 },
+  { type: 'bikelight', x: 35, y: 17, w: 1, h: 1 },
   { type: 'bikesign', x: 34, y: 5, w: 1, h: 1 },
   { type: 'bikesign', x: 34, y: 14, w: 1, h: 1 },
   { type: 'buddenturm', x: 38, y: 17, w: 2, h: 2 },

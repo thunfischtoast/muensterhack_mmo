@@ -53,13 +53,14 @@ const lookPreview = document.getElementById('look-preview');
 const lookCtx = lookPreview.getContext('2d');
 
 const ground = buildGroundFrames();
-// Objects never move, so their draw order entries are built once; animated ones keep one sprite per water frame.
+// Objects never move, so their draw order entries are built once; animated ones keep one sprite per frame.
 const objectEntries = OBJECTS.map((o) => {
-  const frames = ANIMATED_OBJECTS.has(o.type) ? WATER_FRAMES : 1;
-  const sprites = Array.from({ length: frames }, (_, f) => getObjectSprite(o, f));
+  const anim = ANIMATED_OBJECTS[o.type];
+  const sprites = Array.from({ length: anim ? anim.frames : 1 }, (_, f) => getObjectSprite(o, f));
   return {
     sortY: (o.y + o.h) * TILE,
     sprites,
+    anim,
     x: o.x * TILE + (o.w * TILE - sprites[0].width) / 2,
     y: (o.y + o.h) * TILE - sprites[0].height,
   };
@@ -740,7 +741,7 @@ function render(now) {
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
     else if (item.bird) drawBird(item.bird, now);
-    else ctx.drawImage(item.sprites[item.sprites.length > 1 ? waterFrame : 0], item.x, item.y);
+    else ctx.drawImage(item.sprites[item.anim ? Math.floor(Date.now() / item.anim.ms) % item.anim.frames : 0], item.x, item.y);
   }
   // Particles on top: they are tiny and short-lived, and under the sprites they would be hidden.
   for (const q of particles) {
