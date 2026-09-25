@@ -6,7 +6,7 @@ import {
   TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, RACK_SLOTS, birdAt, isSolid,
 } from './map.js';
 import {
-  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite,
+  buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite, getCritterSprite,
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
 } from './sprites.js';
 import { findPath } from './path.js';
@@ -107,6 +107,10 @@ let myCarry = null; // id of the loose bike the own player carries
 let taskText = '';
 let toastTimer = 0;
 let infoText = '';
+let pipeIn = 0; // seconds until the next puff from the Kiepenkerl's pipe
+let fishSplash = { n: -1, end: true }; // which fish jump already splashed
+let prevRideY = null; // own y in the previous frame, to detect crossing the traffic light
+let lastGreenWave = -Infinity;
 
 // ---------------------------------------------------------------------------
 // Networking
@@ -454,7 +458,8 @@ function updateTask() {
 
 /** Show name and year of a referenced project while standing next to it; touch the DOM only on changes. */
 function updateInfo(me) {
-  const spot = infoSpots.find((s) => {
+  const sq = squirrelAt(wallTime());
+  const spot = sq && Math.hypot(me.x - sq.x, me.y - sq.y) <= INFO_REACH + 8 ? AICHHOERNCHEN : infoSpots.find((s) => {
     const dx = me.x - Math.min(s.x1, Math.max(s.x0, me.x));
     const dy = me.y - Math.min(s.y1, Math.max(s.y0, me.y));
     return Math.hypot(dx, dy) <= INFO_REACH;
@@ -501,6 +506,7 @@ function updateEffects(dt) {
     q.y += q.vy * dt;
     q.life -= dt;
   }
+  updateAmbient(dt);
   particles = particles.filter((q) => q.life > 0);
 }
 
@@ -610,6 +616,7 @@ function update(dt, now) {
   updateBikeButton(me);
   updateTask();
   updateInfo(me);
+  checkGreenWave(me, now);
 
   for (const p of players.values()) {
     if (p.id === myId) continue;
@@ -779,10 +786,12 @@ function drawLeezenHints(now) {
   tri(4, '#FCDD09');
 }
 
-/** Small bobbing red "?" over every object that references an earlier Münsterhack project. */
+/** Small bobbing red "?" over every object (and the squirrel) that references an earlier Münsterhack project. */
 function drawInfoMarkers(now) {
   const bob = Math.round(Math.sin(now / 250 + 1) * 1.5);
-  for (const s of infoSpots) {
+  const sq = squirrelAt(wallTime());
+  const spots = sq ? [...infoSpots, { markX: sq.x, markY: sq.y - 24 }] : infoSpots;
+  for (const s of spots) {
     const x = Math.round(s.markX) - 3;
     const y = Math.round(s.markY) + bob;
     ctx.fillStyle = '#000';
@@ -794,6 +803,176 @@ function drawInfoMarkers(now) {
     ctx.fillRect(x + 4, y + 2, 1, 2);
     ctx.fillRect(x + 3, y + 4, 1, 2);
     ctx.fillRect(x + 3, y + 7, 1, 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ambient easter eggs, timed by the wall clock so every player sees them at the same moment
+// ---------------------------------------------------------------------------
+
+const TOWER = OBJECTS.find((o) => o.type === 'tower');
+const TOWER_X = TOWER.x * TILE; // the tower sprite is exactly as wide as its footprint
+const LIGHT = OBJECTS.find((o) => o.type === 'bikelight');
+const KIEPENKERL = OBJECTS.find((o) => o.type === 'kiepenkerl');
+const BANNER_HOUSE = OBJECTS.find((o) => o.type === 'house' && o.v === 3);
+const CAT_HOUSE = OBJECTS.find((o) => o.type === 'house' && o.v === 1);
+/** Cat curled up in the left arch of the second house: sprite left edge and the arcade floor. */
+const CAT = { x: CAT_HOUSE.x * TILE + 5, y: (CAT_HOUSE.y + CAT_HOUSE.h) * TILE };
+const AICHHOERNCHEN = { name: 'AIchhörnchen', year: '2025' };
+const SQUIRREL_ROWS = [1, 4, 7, 10]; // Promenade rows with lindens on both sides of the path
+
+/** Open-water tiles (all eight neighbours water too) where fish may jump. */
+const FISH_TILES = [];
+for (let ty = 1; ty < MAP_H - 1; ty++) {
+  for (let tx = 1; tx < MAP_W - 1; tx++) {
+    let open = true;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (GROUND[ty + dy][tx + dx] !== '~') open = false;
+    if (open) FISH_TILES.push([tx, ty]);
+  }
+}
+
+/** Seconds since the epoch; shared timeline for all clients. */
+function wallTime() {
+  return Date.now() / 1000;
+}
+
+/** Deterministic pseudo-random number in [0, 1) for an event number, identical on every client. */
+function eventRandom(n) {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** Squirrel scurrying across the Promenade for 3.5 s of every 40 s, or null. */
+function squirrelAt(t) {
+  const p = t % 40;
+  if (p >= 3.5) return null;
+  const n = Math.floor(t / 40);
+  const k = p / 3.5;
+  const right = n % 2 === 0;
+  const x0 = 35 * TILE + 12;
+  const x1 = 38 * TILE + 4;
+  return {
+    x: right ? x0 + (x1 - x0) * k : x1 - (x1 - x0) * k,
+    y: SQUIRREL_ROWS[n % SQUIRREL_ROWS.length] * TILE + 15,
+    flip: !right,
+    frame: Math.floor(p * 8) % 2,
+  };
+}
+
+/** Fish jumping in an arc for 1.2 s of every 23 s at a random open-water spot, or null. */
+function fishAt(t) {
+  const p = t % 23;
+  if (p >= 1.2) return null;
+  const n = Math.floor(t / 23);
+  const [tx, ty] = FISH_TILES[Math.floor(eventRandom(n) * FISH_TILES.length)];
+  const dir = n % 2 ? 1 : -1;
+  const k = p / 1.2;
+  const baseY = ty * TILE + 10;
+  return { n, k, baseY, x: tx * TILE + 8 + (k - 0.5) * 20 * dir, y: baseY - Math.sin(Math.PI * k) * 10, flip: dir < 0 };
+}
+
+/** Whether the bike traffic light (and the Leezenflow before it) currently shows green. */
+function lightIsGreen() {
+  const anim = ANIMATED_OBJECTS.bikelight;
+  return Math.floor(Date.now() / anim.ms) % anim.frames < anim.frames / 2;
+}
+
+/** A few droplets flying up where the fish leaves or re-enters the water. */
+function splash(x, y) {
+  for (let i = 0; i < 6; i++) emit(x, y, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 0.5, '#e4f2ff', 1, 80);
+}
+
+/** Emit pipe smoke and fish splashes; called every frame from updateEffects. */
+function updateAmbient(dt) {
+  pipeIn -= dt;
+  if (pipeIn <= 0) {
+    pipeIn = 1.2 + Math.random();
+    // The Kiepenkerl's pipe bowl sits at (11, 7) in his 16x32 sprite
+    emit(KIEPENKERL.x * TILE + 12, (KIEPENKERL.y + KIEPENKERL.h) * TILE - 27, 2 + Math.random() * 2, -5, 2.2, '#d8d8d8', 2);
+  }
+  const fish = fishAt(wallTime());
+  if (fish && fish.n !== fishSplash.n) {
+    fishSplash = { n: fish.n, end: false };
+    splash(fish.x, fish.baseY);
+  }
+  if (fish && fish.k > 0.9 && !fishSplash.end) {
+    fishSplash.end = true;
+    splash(fish.x, fish.baseY);
+  }
+}
+
+/** Show a toast when the own player rides across the traffic light's line while it is green. */
+function checkGreenWave(me, now) {
+  const lineY = (LIGHT.y + 0.5) * TILE;
+  const onPath = me.x >= (LIGHT.x + 1) * TILE && me.x <= (LIGHT.x + 3) * TILE;
+  const crossed = prevRideY !== null && (prevRideY < lineY) !== (me.y < lineY);
+  if (me.bike !== null && onPath && crossed && lightIsGreen() && now - lastGreenWave > 10000) {
+    lastGreenWave = now;
+    showToast('Grüne Welle! 🚲');
+  }
+  prevRideY = me.y;
+}
+
+/** Y-sorted draw entries for the cat, the squirrel and a jumping fish. */
+function critterEntries(now) {
+  const t = wallTime();
+  const me = players.get(myId);
+  const awake = me && Math.hypot(me.x - (CAT.x + 7), me.y - CAT.y) < 40;
+  const catFrame = awake ? 2 : Math.floor(now / 300) % 14 === 0 ? 1 : 0;
+  const entries = [{ sortY: CAT.y + 0.5, critter: { sprite: getCritterSprite('cat', catFrame), x: CAT.x, y: CAT.y - 11 } }];
+  const sq = squirrelAt(t);
+  if (sq) entries.push({ sortY: sq.y, critter: { sprite: getCritterSprite('squirrel', sq.frame), x: sq.x - 6, y: sq.y - 10, flip: sq.flip } });
+  const fish = fishAt(t);
+  if (fish) entries.push({ sortY: fish.baseY, critter: { sprite: getCritterSprite('fish'), x: fish.x - 4, y: fish.y - 5, flip: fish.flip } });
+  return entries;
+}
+
+/** Draw a critter sprite, mirrored when it faces left. */
+function drawCritter(c) {
+  const x = Math.round(c.x);
+  const y = Math.round(c.y);
+  if (c.flip) {
+    ctx.save();
+    ctx.translate(x + c.sprite.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(c.sprite, 0, y);
+    ctx.restore();
+  } else {
+    ctx.drawImage(c.sprite, x, y);
+  }
+}
+
+/**
+ * Details on buildings that players can never stand in front of: live clock hands on St. Lamberti,
+ * the tower keeper blowing her horn now and then, and the mascot waving from a window.
+ */
+function drawBuildingEggs(now) {
+  const t = wallTime();
+  const d = new Date();
+  const minutes = d.getMinutes() + d.getSeconds() / 60;
+  const hours = (d.getHours() % 12) + minutes / 60;
+  const cx = TOWER_X + 24;
+  const cy = 88;
+  ctx.fillStyle = '#000';
+  for (const [turn, len] of [[hours / 12, 2.5], [minutes / 60, 4]]) {
+    const a = turn * 2 * Math.PI;
+    for (let r = 0; r <= len; r += 0.5) ctx.fillRect(Math.round(cx + Math.sin(a) * r), Math.round(cy - Math.cos(a) * r), 1, 1);
+  }
+  if (t % 240 < 8) {
+    // Tower keeper in the middle belfry opening, music notes rising from her horn
+    ctx.drawImage(getCritterSprite('keeper'), TOWER_X + 20, 49);
+    for (let i = 0; i < 3; i++) {
+      const age = (t * 0.8 + i / 3) % 1;
+      const nx = Math.round(TOWER_X + 30 + age * 6 + i * 2);
+      const ny = Math.round(48 - age * 16);
+      ctx.fillRect(nx, ny, 1, 3);
+      ctx.fillRect(nx - 1, ny + 2, 1, 1);
+      ctx.fillRect(nx + 1, ny, 1, 1);
+    }
+  }
+  if ((t + 60) % 150 < 6) {
+    const houseTop = (BANNER_HOUSE.y + BANNER_HOUSE.h) * TILE - 80;
+    ctx.drawImage(getCritterSprite('mascot', Math.floor(now / 250) % 2), BANNER_HOUSE.x * TILE + 48, houseTop + 28);
   }
 }
 
@@ -925,6 +1104,7 @@ function render(now) {
     ...sortedPlayers.map((p) => ({ sortY: p.y, player: p })),
     ...birds.map((b) => ({ sortY: b.y, bird: b })),
     ...lyingBikes().map((b) => ({ sortY: b.y, lying: b })),
+    ...critterEntries(now),
     // Parked Leezen stand in front of the rack stands, so they sort just after the rack.
     ...RACK_SLOTS.map((slot, i) => ({ slot, color: leezen ? leezen.slots[i] : null }))
       .filter((e) => e.color !== null)
@@ -933,6 +1113,7 @@ function render(now) {
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
     else if (item.bird) drawBird(item.bird, now);
+    else if (item.critter) drawCritter(item.critter);
     else if (item.lying) {
       ctx.drawImage(getLooseBikeSprite(item.lying.color, true), Math.round(item.lying.x) - 8, Math.round(item.lying.y) - 7);
     } else if (item.parked) {
@@ -940,6 +1121,7 @@ function render(now) {
     }
     else ctx.drawImage(item.sprites[item.anim ? Math.floor(Date.now() / item.anim.ms) % item.anim.frames : 0], item.x, item.y);
   }
+  drawBuildingEggs(now);
   // Particles on top: they are tiny and short-lived, and under the sprites they would be hidden.
   for (const q of particles) {
     ctx.globalAlpha = q.life / q.max;

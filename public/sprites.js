@@ -752,8 +752,6 @@ function drawTower(ctx) {
       if (d <= 30) rect(ctx, d > 20 ? BLACK : WHITE, 24 + x, 88 + y);
     }
   }
-  rect(ctx, BLACK, 24, 84, 1, 5);
-  rect(ctx, BLACK, 24, 88, 3, 1);
   drawGothicWindow(ctx, 20, 96, 8, 14, WHITE);
   // Portal
   rect(ctx, BLACK, 18, 113, 12, 15);
@@ -1421,6 +1419,94 @@ export function getLooseBikeSprite(color, lying) {
     canvas = upright;
   }
   looseBikeCache.set(key, canvas);
+  return canvas;
+}
+
+// ---------------------------------------------------------------------------
+// Ambient easter eggs (squirrel, cat, fish, tower keeper, mascot at the window)
+// ---------------------------------------------------------------------------
+
+const critterCache = new Map();
+
+/**
+ * Return a cached sprite for a small ambient creature. Sprites face right; game.js mirrors them.
+ * @param {'squirrel'|'cat'|'fish'|'keeper'|'mascot'} kind
+ * @param {number} frame squirrel: hop 0/1; cat: 0 asleep, 1 tail twitch, 2 awake; mascot: wave 0/1
+ */
+export function getCritterSprite(kind, frame = 0) {
+  const key = `${kind}|${frame}`;
+  let canvas = critterCache.get(key);
+  if (canvas) return canvas;
+  const size = { squirrel: [12, 10], cat: [14, 11], fish: [8, 5], keeper: [9, 10], mascot: [7, 9] }[kind];
+  let ctx;
+  [canvas, ctx] = makeCanvas(...size);
+  switch (kind) {
+    case 'squirrel': {
+      const hop = frame === 1 ? -1 : 0;
+      rect(ctx, '#c86a3a', 1, 1 + hop, 3, 5);
+      rect(ctx, '#c86a3a', 2, 0 + hop, 2, 1);
+      rect(ctx, '#b5562a', 4, 4 + hop, 4, 3);
+      rect(ctx, '#b5562a', 7, 3 + hop, 3, 3);
+      rect(ctx, '#b5562a', 8, 2 + hop, 1, 1);
+      rect(ctx, '#b5562a', frame === 1 ? 5 : 4, 7 + hop, 1, 1);
+      rect(ctx, '#b5562a', frame === 1 ? 6 : 7, 7 + hop, 1, 1);
+      addOutline(canvas);
+      rect(ctx, BLACK, 9, 4 + hop, 1, 1);
+      rect(ctx, '#e8a070', 5, 5 + hop, 2, 1);
+      break;
+    }
+    case 'cat': {
+      // Orange tabby, curled up; awake it lifts its head and opens its eyes
+      const headY = frame === 2 ? 2 : 4;
+      rect(ctx, '#e08a3a', 2, 5, 8, 4);
+      rect(ctx, '#e08a3a', 3, 4, 6, 1);
+      rect(ctx, '#e08a3a', 8, headY, 4, 3);
+      rect(ctx, '#e08a3a', 8, headY - 1, 1, 1);
+      rect(ctx, '#e08a3a', 11, headY - 1, 1, 1);
+      rect(ctx, '#c86a2a', 2, 9, 7, 1);
+      if (frame === 1) rect(ctx, '#c86a2a', 1, 7, 1, 2);
+      addOutline(canvas);
+      for (const sx of [4, 6]) rect(ctx, '#c86a2a', sx, 5, 1, 3);
+      if (frame === 2) {
+        rect(ctx, '#3a9a3a', 9, headY + 1, 1, 1);
+        rect(ctx, '#3a9a3a', 11, headY + 1, 1, 1);
+      } else {
+        rect(ctx, '#7a4a1a', 9, headY + 1, 3, 1);
+      }
+      rect(ctx, '#f0b0a0', 10, headY + 2, 1, 1);
+      break;
+    }
+    case 'fish':
+      rect(ctx, '#c8d0d8', 2, 1, 5, 2);
+      rect(ctx, '#c8d0d8', 1, 0, 1, 1);
+      rect(ctx, '#c8d0d8', 1, 3, 1, 1);
+      rect(ctx, '#e8f0f8', 3, 1, 3, 1);
+      rect(ctx, BLACK, 6, 1, 1, 1);
+      break;
+    case 'keeper':
+      // Tower keeper (Türmerin) of St. Lamberti with her copper horn
+      rect(ctx, '#f0c4a0', 2, 1, 3, 3);
+      rect(ctx, '#2a2a2a', 2, 0, 3, 1);
+      rect(ctx, '#7a1a1a', 1, 4, 5, 6);
+      rect(ctx, '#c87533', 5, 2, 2, 1);
+      rect(ctx, '#e0954a', 7, 1, 2, 3);
+      break;
+    case 'mascot':
+      // The Münsterhack mascot with the yellow bow, waving from a window
+      rect(ctx, '#3a4a5a', 0, 0, 7, 9);
+      rect(ctx, '#f3c9a4', 2, 2, 3, 3);
+      rect(ctx, '#6b3e1f', 2, 1, 3, 1);
+      rect(ctx, '#6b3e1f', 1, 2, 1, 3);
+      rect(ctx, YELLOW, 1, 0, 2, 1);
+      rect(ctx, YELLOW, 4, 0, 2, 1);
+      rect(ctx, BLACK, 3, 3, 1, 1);
+      rect(ctx, YELLOW, 1, 5, 5, 4);
+      rect(ctx, RED, 2, 6, 1, 3);
+      rect(ctx, RED, 4, 6, 1, 3);
+      rect(ctx, '#f3c9a4', frame === 1 ? 6 : 5, 1, 1, 3);
+      break;
+  }
+  critterCache.set(key, canvas);
   return canvas;
 }
 
