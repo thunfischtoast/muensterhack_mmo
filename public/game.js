@@ -10,6 +10,7 @@ import {
   CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
 } from './sprites.js';
 import { findPath } from './path.js';
+import { NPCS, npcAt } from './npcs.js';
 import { ACHIEVEMENTS, unlock, progress, progressCount, isUnlocked, unlockedCount } from './achievements.js';
 
 const SPEED = 72; // pixels per second
@@ -23,6 +24,9 @@ const SPARK_MS = 400;
 const MAX_PARTICLES = 200;
 const INFO_REACH = 20; // pixels from the feet to an object's footprint to show its project info
 const TOAST_MS = 3500;
+const GREET_REACH = 28; // pixels from the own player at which an NPC says hello
+const GREET_COOLDOWN_MS = 20000;
+const GREET_GAP_MS = 5000; // between hellos of different NPCs, so a group does not greet one after another
 /** Dust colors per ground type (see GROUND in map.js). */
 const DUST_COLORS = {
   c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], t: ['#b5ad9e', '#e4ded2'], j: ['#7a5230', '#a0703f'],
@@ -99,6 +103,11 @@ let marker = null;
 let sparks = []; // high-five claps: world position and start time
 let particles = [];
 const birds = BIRDS.map((b) => ({ ...b, rippleIn: Math.random() }));
+// NPCs carry the same fields as players, so drawPlayer and drawOverlay work for them unchanged.
+const npcs = NPCS.map((n) => ({
+  ...n, bike: n.bike ?? null, x: 0, y: 0, dir: 'down', walkTime: 0, breathPhase: Math.random() * 1400,
+  blinkAt: 0, waveUntil: 0, bubble: null, lineNo: null, stopNo: null, greetAt: 0,
+}));
 let lastSent = '';
 let lastSendTime = 0;
 let scale = 3;
@@ -116,6 +125,7 @@ let pipeIn = 0; // seconds until the next puff from the Kiepenkerl's pipe
 let fishSplash = { n: -1, end: true }; // which fish jump already splashed
 let prevRideY = null; // own y in the previous frame, to detect crossing the traffic light
 let lastGreenWave = -Infinity;
+let lastGreet = -Infinity;
 
 // ---------------------------------------------------------------------------
 // Networking
@@ -1074,6 +1084,70 @@ function drawBuildingEggs(now) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// NPCs
+// ---------------------------------------------------------------------------
+
+/** Move NPCs along their routes and let them talk: route stops, their lines in turn, and a hello for the own player. */
+function updateNpcs(now) {
+  const t = wallTime();
+  const me = players.get(myId);
+  let greeter = null; // only the nearest NPC says hello, so groups do not talk over each other
+  let greetDist = GREET_REACH;
+  for (const n of npcs) {
+    const pos = npcAt(n, t);
+    n.x = pos.x;
+    n.y = pos.y;
+    n.dir = pos.dir;
+    // Scaled so the walk cycle matches the speed, like for players
+    n.walkTime = pos.moving ? t * (n.speed / SPEED) : 0;
+    let say = null;
+    if (pos.stop !== n.stopNo) {
+      n.stopNo = pos.stop;
+      if (pos.stop !== null && !n.offset) say = n.route[pos.stop][3]; // only the guide explains, the group listens
+    }
+    if (n.lines) {
+      const lineNo = Math.floor((t + n.shift) / n.every);
+      // Skip the line that is due right at page load, so NPCs do not all talk at once.
+      if (n.lineNo !== null && lineNo !== n.lineNo) say = n.lines[lineNo % n.lines.length];
+      n.lineNo = lineNo;
+    }
+    if (say) n.bubble = { text: say, start: now };
+    const dist = me ? Math.hypot(me.x - n.x, me.y - n.y) : Infinity;
+    if (dist < greetDist) {
+      greeter = n;
+      greetDist = dist;
+    }
+  }
+  if (greeter && now > greeter.greetAt && now > lastGreet + GREET_GAP_MS) {
+    greeter.bubble = { text: greeter.greet, start: now };
+    lastGreet = now;
+  }
+  // Stay quiet while the player lingers nearby; the cooldown starts again once they walk off.
+  if (greeter) greeter.greetAt = now + GREET_COOLDOWN_MS;
+}
+
+/** Draw an NPC: like a player, sitting ones cut off at the hips, plus the guide's umbrella or a laptop. */
+function drawNpc(n, now) {
+  const x = Math.round(n.x);
+  const y = Math.round(n.y);
+  if (!n.sit) {
+    drawPlayer(n, now);
+    if (n.prop === 'umbrella') {
+      ctx.fillStyle = '#3a2a1a';
+      ctx.fillRect(x + 5, y - 28, 1, 17);
+      ctx.drawImage(getCritterSprite('umbrella'), x - 1, y - 34);
+    }
+    return;
+  }
+  // Seated on the bench: y is the bench's bottom edge, the seat is 6px above it.
+  if (now > n.blinkAt + 140) n.blinkAt = now + 2000 + Math.random() * 4000;
+  const breath = Math.floor((now + n.breathPhase) / 700) % 2;
+  const { canvas: sprite } = getCharacterSprite(n.look, 'down', 0, breath, now > n.blinkAt);
+  ctx.drawImage(sprite, 0, 0, CHAR_W, 18, x - CHAR_W / 2, y - 23, CHAR_W, 18);
+  ctx.drawImage(getCritterSprite('laptop', Math.floor((now + n.breathPhase) / 180) % 2), x - 6, y - 12);
+}
+
 /** High-five clap: yellow pixel rays bursting outward. */
 function drawSparks(now) {
   sparks = sparks.filter((s) => now - s.start < SPARK_MS);
@@ -1091,12 +1165,12 @@ function drawSparks(now) {
 }
 
 /** Draw text with a hard black outline (pixel look) in screen space. */
-function outlinedText(text, x, y, o) {
+function outlinedText(text, x, y, o, color = '#FFF') {
   ctx.fillStyle = '#000';
   for (let dx = -o; dx <= o; dx += o) {
     for (let dy = -o; dy <= o; dy += o) if (dx || dy) ctx.fillText(text, x + dx, y + dy);
   }
-  ctx.fillStyle = '#FFF';
+  ctx.fillStyle = color;
   ctx.fillText(text, x, y);
 }
 
@@ -1132,15 +1206,16 @@ function wrapText(text, maxWidth) {
   return lines;
 }
 
-/** Draw the name label and the speech bubble above a player (screen space). */
-function drawOverlay(p, now, camX, camY, fontPx) {
+/** Draw the name label (NPCs in grey) and the speech bubble above a player or NPC (screen space). */
+function drawOverlay(p, now, camX, camY, fontPx, nameColor) {
   const sx = Math.round((p.x - camX) * scale);
-  const lift = p.bike !== null ? RIDE_LIFT : 0;
+  // Riders sit higher; the guide's umbrella goes between her head and the name.
+  const lift = p.bike !== null ? RIDE_LIFT : p.prop === 'umbrella' ? 12 : 0;
   const headY = Math.round((p.y - CHAR_H - 1 - lift - camY) * scale);
   const o = Math.max(1, Math.round(dpr));
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  outlinedText(p.name, sx, headY, o);
+  outlinedText(p.name, sx, headY, o, nameColor);
 
   const b = p.bubble;
   if (!b) return;
@@ -1203,6 +1278,8 @@ function render(now) {
     ...birds.map((b) => ({ sortY: b.y, bird: b })),
     ...lyingBikes().map((b) => ({ sortY: b.y, lying: b })),
     ...critterEntries(now),
+    // Sitting NPCs sort just after their bench, so they sit on it rather than behind it.
+    ...npcs.map((n) => ({ sortY: n.y + (n.sit ? 0.5 : 0), npc: n })),
     // Parked Leezen stand in front of the rack stands, so they sort just after the rack.
     ...RACK_SLOTS.map((slot, i) => ({ slot, color: leezen ? leezen.slots[i] : null }))
       .filter((e) => e.color !== null)
@@ -1210,6 +1287,7 @@ function render(now) {
   ].sort((a, b) => a.sortY - b.sortY);
   for (const item of drawList) {
     if (item.player) drawPlayer(item.player, now);
+    else if (item.npc) drawNpc(item.npc, now);
     else if (item.bird) drawBird(item.bird, now);
     else if (item.critter) drawCritter(item.critter);
     else if (item.lying) {
@@ -1234,6 +1312,7 @@ function render(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));
   ctx.font = `${fontPx}px "Share Tech Mono", monospace`;
+  for (const n of npcs) drawOverlay(n, now, camX, camY, fontPx, '#C8C8C8');
   for (const p of sortedPlayers) drawOverlay(p, now, camX, camY, fontPx);
 }
 
@@ -1245,6 +1324,7 @@ function loop(now) {
   lastFrame = now;
   if (players.has(myId)) update(dt, now);
   updateEffects(dt);
+  updateNpcs(now);
   render(now);
   if (!loginEl.hidden) drawLookPreview(now);
   requestAnimationFrame(loop);

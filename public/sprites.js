@@ -1423,21 +1423,21 @@ export function getLooseBikeSprite(color, lying) {
 }
 
 // ---------------------------------------------------------------------------
-// Ambient easter eggs (squirrel, cat, fish, tower keeper, mascot at the window)
+// Ambient easter eggs (squirrel, cat, fish, tower keeper, mascot at the window) and NPC props
 // ---------------------------------------------------------------------------
 
 const critterCache = new Map();
 
 /**
  * Return a cached sprite for a small ambient creature. Sprites face right; game.js mirrors them.
- * @param {'squirrel'|'cat'|'fish'|'keeper'|'mascot'} kind
- * @param {number} frame squirrel: hop 0/1; cat: 0 asleep, 1 tail twitch, 2 awake; mascot: wave 0/1
+ * @param {'squirrel'|'cat'|'fish'|'keeper'|'mascot'|'umbrella'|'laptop'} kind
+ * @param {number} frame squirrel: hop 0/1; cat: 0 asleep, 1 tail twitch, 2 awake; mascot: wave 0/1; laptop: typing 0/1
  */
 export function getCritterSprite(kind, frame = 0) {
   const key = `${kind}|${frame}`;
   let canvas = critterCache.get(key);
   if (canvas) return canvas;
-  const size = { squirrel: [12, 10], cat: [14, 11], fish: [8, 5], keeper: [9, 10], mascot: [7, 9] }[kind];
+  const size = { squirrel: [12, 10], cat: [14, 11], fish: [8, 5], keeper: [9, 10], mascot: [7, 9], umbrella: [13, 7], laptop: [12, 7] }[kind];
   let ctx;
   [canvas, ctx] = makeCanvas(...size);
   switch (kind) {
@@ -1504,6 +1504,24 @@ export function getCritterSprite(kind, frame = 0) {
       rect(ctx, RED, 2, 6, 1, 3);
       rect(ctx, RED, 4, 6, 1, 3);
       rect(ctx, '#f3c9a4', frame === 1 ? 6 : 5, 1, 1, 3);
+      break;
+    case 'umbrella':
+      // The tour guide's raised umbrella, so the group can find her
+      rect(ctx, RED, 2, 2, 9, 2);
+      rect(ctx, RED, 1, 4, 11, 1);
+      rect(ctx, RED, 4, 1, 5, 1);
+      rect(ctx, YELLOW, 6, 2, 1, 3);
+      rect(ctx, YELLOW, 6, 0, 1, 1);
+      addOutline(canvas);
+      break;
+    case 'laptop':
+      // Back of an open laptop with a Münsterhack sticker, hands typing at the sides
+      rect(ctx, '#b8bcc4', 2, 1, 8, 5);
+      rect(ctx, '#8a8e96', 2, 5, 8, 1);
+      addOutline(canvas);
+      rect(ctx, RED, 5, 2, 2, 2);
+      rect(ctx, '#f3c9a4', 0, frame ? 4 : 5, 1, 1);
+      rect(ctx, '#f3c9a4', 11, frame ? 5 : 4, 1, 1);
       break;
   }
   critterCache.set(key, canvas);
