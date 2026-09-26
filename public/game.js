@@ -17,7 +17,8 @@ const SPEED = 72; // pixels per second
 const RIDE_SPEED = 140;
 const BIKE_REACH = 24; // max distance in pixels from the feet to a bike to get on
 const SEND_MS = 100;
-const BUBBLE_MS = 5000;
+const CHAT_BUBBLE_MS = 9000; // player chat stays long enough to read and reply
+const NPC_BUBBLE_MS = 5000;
 const BUBBLE_FADE_MS = 500;
 const WAVE_MS = 1200;
 const SPARK_MS = 400;
@@ -1222,7 +1223,8 @@ function drawOverlay(p, now, camX, camY, fontPx, named = true) {
   const b = p.bubble;
   if (!b) return;
   const age = now - b.start;
-  if (age > BUBBLE_MS) {
+  const ms = named ? CHAT_BUBBLE_MS : NPC_BUBBLE_MS;
+  if (age > ms) {
     p.bubble = null;
     return;
   }
@@ -1239,19 +1241,21 @@ function drawOverlay(p, now, camX, camY, fontPx, named = true) {
   // Keep bubbles of players near the screen edge readable.
   const x = Math.max(u, Math.min(canvas.width - w - u, sx - Math.round(w / 2)));
   const y = headY - (named ? fontPx : 0) - 4 * u - h;
-  ctx.globalAlpha = age > BUBBLE_MS - BUBBLE_FADE_MS ? (BUBBLE_MS - age) / BUBBLE_FADE_MS : 1;
-  ctx.fillStyle = '#000';
+  ctx.globalAlpha = age > ms - BUBBLE_FADE_MS ? (ms - age) / BUBBLE_FADE_MS : 1;
+  // NPC talk is muted grey, so real chat (black on white) stands out.
+  const [edge, fill, ink] = named ? ['#000', '#FFF', '#000'] : ['#8A8A8A', '#E6E6E6', '#555'];
+  ctx.fillStyle = edge;
   ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = '#FFF';
+  ctx.fillStyle = fill;
   ctx.fillRect(x + u, y + u, w - 2 * u, h - 2 * u);
   // Stepped tail pointing down at the speaker
   for (let i = 0; i < 3; i++) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = edge;
     ctx.fillRect(sx - (3 - i) * u, y + h - u + i * u, (3 - i) * 2 * u, u);
-    ctx.fillStyle = '#FFF';
+    ctx.fillStyle = fill;
     if (i < 2) ctx.fillRect(sx - (2 - i) * u, y + h - u + i * u, (2 - i) * 2 * u, u);
   }
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = ink;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   b.lines.forEach((line, i) => ctx.fillText(line, x + u + pad, y + pad + i * lineH));
