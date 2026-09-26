@@ -1281,6 +1281,9 @@ function drawOverlay(p, now, camX, camY, fontPx, named = true) {
 
   const b = p.bubble;
   if (!b) return;
+  // Only players' bubbles are pinned to the screen edge; off-screen NPCs stay quiet to avoid clutter.
+  const footY = Math.round((p.y - camY) * scale);
+  if (!named && (sx < 0 || sx > canvas.width || footY < 0 || headY > canvas.height)) return;
   const age = now - b.start;
   const ms = named ? CHAT_BUBBLE_MS : NPC_BUBBLE_MS;
   if (age > ms) {
