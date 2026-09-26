@@ -19,7 +19,7 @@ export const ACHIEVEMENTS = [
   { id: 'keeper', name: 'Türmerin gehört', desc: 'Sei an Lamberti, wenn die Türmerin bläst.', hint: 'Hör mal nach oben.' },
   { id: 'mascot', name: 'Winke, winke', desc: 'Steh vor dem Fenster, wenn das Maskottchen winkt.', hint: 'Manchmal schaut jemand aus dem Fenster.' },
   { id: 'kiosk', name: 'Kiosk-Kenner:in', desc: 'Besuch das Büdchen am Aasee.', hint: 'Durst?' },
-  { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 10 früheren Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 10 },
+  { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 11 Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 11 },
 ];
 
 const STORAGE_KEY = 'mh-achievements';

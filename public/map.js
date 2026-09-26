@@ -66,6 +66,7 @@ const PROJECTS = {
   reloaded1648: { name: '1648_reloaded', year: '2023' },
   corndex: { name: 'Corndex', year: '2024' },
   nestflix: { name: 'Nestflix', year: '2025' },
+  muensterMoney: { name: 'Münster Money', year: '2026' },
 };
 
 /**
@@ -138,6 +139,7 @@ export const OBJECTS = [
   { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1, info: PROJECTS.leihleeze },
   { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1, info: PROJECTS.krautUndRueben },
   { type: 'kiosk', x: 34, y: 20, w: 3, h: 1, info: PROJECTS.corndex },
+  { type: 'litfass', x: 31, y: 14, w: 1, h: 1, info: PROJECTS.muensterMoney },
   // SpecOps café with Code for Münster on the bench in front (their people are NPCs, see npcs.js)
   { type: 'specops', x: 0, y: 11, w: 3, h: 2, info: { name: 'Code for Münster', year: 'Hacknight jeden 2. Dienstag', label: 'Community' } },
   { type: 'bench', x: 0, y: 13, w: 3, h: 1 },

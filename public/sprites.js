@@ -1225,6 +1225,29 @@ function drawSpecOps(ctx) {
   rect(ctx, YELLOW, 40, 38, 1, 1);
 }
 
+/** Advertising column (Litfaßsäule) with a Münster Money budget poster: pie chart and bars, 16x40. */
+function drawLitfass(ctx) {
+  rect(ctx, '#2e5a3a', 2, 4, 12, 3);
+  rect(ctx, '#2e5a3a', 5, 1, 6, 3);
+  rect(ctx, '#e8e2d0', 3, 7, 10, 29);
+  rect(ctx, '#2e5a3a', 2, 36, 12, 3);
+  addOutline(ctx.canvas);
+  // Pie chart: where the money goes
+  const slices = [[RED, 0.45], [YELLOW, 0.3], [NAVY, 1]];
+  for (let y = -3; y <= 3; y++) {
+    for (let x = -3; x <= 3; x++) {
+      if (x * x + y * y > 10) continue;
+      const turn = (Math.atan2(x, -y) / (2 * Math.PI) + 1) % 1;
+      rect(ctx, slices.find(([, end]) => turn < end)[0], 8 + x, 13 + y);
+    }
+  }
+  // Bar chart below
+  [[RED, 6], [YELLOW, 4], [NAVY, 7], ['#3a9a3a', 3]].forEach(([color, hgt], i) => rect(ctx, color, 4 + i * 2, 33 - hgt, 1, hgt));
+  rect(ctx, BLACK, 4, 33, 8, 1);
+  // Vertical seam of the column's curve
+  rect(ctx, '#c8c2b0', 12, 7, 1, 29);
+}
+
 /** Old-town street lamp, 16x40. */
 function drawLamp(ctx) {
   rect(ctx, '#2a2a2a', 7, 12, 2, 26);
@@ -1611,7 +1634,7 @@ export function getObjectSprite(obj, frame = 0) {
     bench: [obj.w * TILE, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
     bush: [16, 16], flowers: [32, 16], boat: [16, 16], rack: [obj.w * TILE, 16], leezenflow: [16, 40], bikelight: [16, 40],
-    buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48], specops: [48, 48],
+    buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48], litfass: [16, 40], specops: [48, 48],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1644,6 +1667,7 @@ export function getObjectSprite(obj, frame = 0) {
     case 'chalkboard': drawChalkboard(ctx); break;
     case 'kiosk': drawKiosk(ctx, frame); break;
     case 'specops': drawSpecOps(ctx); break;
+    case 'litfass': drawLitfass(ctx); break;
   }
   objectCache.set(key, canvas);
   return canvas;

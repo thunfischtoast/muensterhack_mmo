@@ -35,7 +35,7 @@ Chat messages appear above the character for 9 seconds (NPC talk in muted grey, 
 
 A gust of wind knocked over 6 Leezen on the plaza (marked with a yellow "!"). Pick one up ("Aufheben" / E), ride it to the empty bike rack below the plaza (free slots glow, an arrow points the way) and park it ("Einparken"). Getting off elsewhere drops the bike where you stand. When all 6 are parked, everyone gets a celebration and a new round starts 60 seconds later. The state lives in server memory and resets on restart.
 
-## Easter eggs: earlier Münsterhack projects
+## Easter eggs: Münsterhack projects
 
 Small nods to projects from [codeformuenster/muensterhack](https://github.com/codeformuenster/muensterhack). Each has a red "?" above it; walking up to it shows the project name and year:
 
@@ -48,6 +48,7 @@ Small nods to projects from [codeformuenster/muensterhack](https://github.com/co
 - **1648_reloaded** (2023): "1648" cartouche on the Historic Town Hall
 - **Corndex** (2024): kiosk at the Aasee whose beer price rises with the noise meter
 - **Nestflix** (2025): nest box with a recording light on a Promenade tree
+- **Münster Money** (2026): advertising column with a budget pie chart near Lamberti
 - **AIchhörnchen** (2025): a squirrel that scurries across the Promenade every 30 seconds
 
 More small things to spot: the Lamberti clock shows the real time, the tower keeper blows her horn every few minutes, the Münsterhack mascot waves from a window now and then, a cat naps in an arcade, fish jump in the Aasee, the Kiepenkerl smokes his pipe, and riding through the green bike light gets you a "Grüne Welle!".
