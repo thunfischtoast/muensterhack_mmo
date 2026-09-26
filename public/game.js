@@ -1167,12 +1167,12 @@ function drawSparks(now) {
 }
 
 /** Draw text with a hard black outline (pixel look) in screen space. */
-function outlinedText(text, x, y, o, color = '#FFF') {
+function outlinedText(text, x, y, o) {
   ctx.fillStyle = '#000';
   for (let dx = -o; dx <= o; dx += o) {
     for (let dy = -o; dy <= o; dy += o) if (dx || dy) ctx.fillText(text, x + dx, y + dy);
   }
-  ctx.fillStyle = color;
+  ctx.fillStyle = '#FFF';
   ctx.fillText(text, x, y);
 }
 
@@ -1208,16 +1208,16 @@ function wrapText(text, maxWidth) {
   return lines;
 }
 
-/** Draw the name label (NPCs in grey) and the speech bubble above a player or NPC (screen space). */
-function drawOverlay(p, now, camX, camY, fontPx, nameColor) {
+/** Draw the name label (players only, NPCs stay anonymous) and the speech bubble above a player or NPC (screen space). */
+function drawOverlay(p, now, camX, camY, fontPx, named = true) {
   const sx = Math.round((p.x - camX) * scale);
-  // Riders sit higher; the guide's umbrella goes between her head and the name.
+  // Riders sit higher; the guide's bubble goes above her umbrella.
   const lift = p.bike !== null ? RIDE_LIFT : p.prop === 'umbrella' ? 12 : 0;
   const headY = Math.round((p.y - CHAR_H - 1 - lift - camY) * scale);
   const o = Math.max(1, Math.round(dpr));
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  outlinedText(p.name, sx, headY, o, nameColor);
+  if (named) outlinedText(p.name, sx, headY, o);
 
   const b = p.bubble;
   if (!b) return;
@@ -1238,7 +1238,7 @@ function drawOverlay(p, now, camX, camY, fontPx, nameColor) {
   const h = b.lines.length * lineH + pad * 2;
   // Keep bubbles of players near the screen edge readable.
   const x = Math.max(u, Math.min(canvas.width - w - u, sx - Math.round(w / 2)));
-  const y = headY - fontPx - 4 * u - h;
+  const y = headY - (named ? fontPx : 0) - 4 * u - h;
   ctx.globalAlpha = age > BUBBLE_MS - BUBBLE_FADE_MS ? (BUBBLE_MS - age) / BUBBLE_FADE_MS : 1;
   ctx.fillStyle = '#000';
   ctx.fillRect(x, y, w, h);
@@ -1314,7 +1314,7 @@ function render(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));
   ctx.font = `${fontPx}px "Share Tech Mono", monospace`;
-  for (const n of npcs) drawOverlay(n, now, camX, camY, fontPx, '#C8C8C8');
+  for (const n of npcs) drawOverlay(n, now, camX, camY, fontPx, false);
   for (const p of sortedPlayers) drawOverlay(p, now, camX, camY, fontPx);
 }
 
