@@ -27,7 +27,7 @@ Tests: `npm test`.
 | Walk | WASD / arrow keys, or click a destination | Tap a destination |
 | Chat | Enter, type, Enter to send (Esc cancels) | Chat button bottom right |
 | Wave | Q (next to someone: high five) | Hand button |
-| Bike | E next to a bike (or the button) to get on/off | "Aufsteigen" / "Absteigen" button |
+| Bike | E next to a bike (or the button), or click a bike to walk there and get on; click yourself to get off | Tap a bike to walk there and get on, tap yourself to get off (or the bike button) |
 
 Chat messages appear above the character for 9 seconds (NPC talk in muted grey, 5 seconds). Riding a bike is about twice as fast as walking; the parked bike stays where it is. Players pick one of 15 looks on the login screen. Ducks and a swan swim on the Aasee (driven by the wall clock, so everyone sees roughly the same).
 

@@ -116,6 +116,9 @@ let scale = 3;
 let dpr = 1;
 let version = null; // server build seen on the first connect; a different one means we are outdated
 let bikeButtonText = '';
+let pendingBike = null; // bike action (label) to run when the walk to a tapped bike or rack slot ends
+let bikeTipShown = false;
+const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 let leezen = null; // Leezen-Chaos state from the server
 let leezenAt = 0; // when it arrived, to count down resetIn locally
 let myCarry = null; // id of the loose bike the own player carries
@@ -560,23 +563,71 @@ function updateBikeButton(me) {
   bikeButtonText = text;
   bikeButton.textContent = text;
   bikeButton.hidden = !text;
+  if (!text) return;
+  // Restart the pop animation so the button gets noticed each time it changes.
+  bikeButton.classList.remove('pop');
+  void bikeButton.offsetWidth;
+  bikeButton.classList.add('pop');
+  if (isTouch && !bikeTipShown && text === 'Aufsteigen') {
+    bikeTipShown = true;
+    showToast('Tipp: Leeze antippen zum Aufsteigen, dich selbst antippen zum Absteigen');
+  }
+}
+
+/** Whether a world point lies on the 16x16 sprite of a bike or rack slot centered at (x, y). */
+function hitsTile(wx, wy, item) {
+  return Math.abs(wx - item.x) <= TILE / 2 && Math.abs(wy - item.y) <= TILE / 2 + 2;
+}
+
+/**
+ * Tap/click on bikes: tapping yourself while riding gets off; tapping a parked Leeze, a fallen one or
+ * (while carrying) a free rack slot walks there and runs the action on arrival. Returns true if handled.
+ */
+function tapBike(wx, wy) {
+  const me = players.get(myId);
+  if (me.bike !== null && Math.abs(wx - me.x) <= RIDE_W / 2 && wy >= me.y - RIDE_H - RIDE_LIFT && wy <= me.y + 2) {
+    toggleBike();
+    return true;
+  }
+  let target = null;
+  if (myCarry !== null) {
+    const slot = freeSlots().find((sl) => hitsTile(wx, wy, sl));
+    if (slot) target = { label: 'Einparken', x: slot.x, y: slot.y };
+  } else if (me.bike === null) {
+    const loose = lyingBikes().find((b) => hitsTile(wx, wy, b));
+    const bike = BIKES.find((b) => hitsTile(wx, wy, b));
+    if (loose) target = { label: 'Aufheben', x: loose.x, y: loose.y };
+    else if (bike) target = { label: 'Aufsteigen', x: bike.x, y: bike.y };
+  }
+  if (!target) return false;
+  // Parked bikes and rack slots are solid: walk to the free neighbour tile closest to the player.
+  const spots = [[0, 0], [0, TILE], [0, -TILE], [-TILE, 0], [TILE, 0]]
+    .map(([dx, dy]) => ({ x: target.x + dx, y: target.y + dy }))
+    .filter((p) => !isSolid(Math.floor(p.x / TILE), Math.floor(p.y / TILE)))
+    .sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y));
+  if (!spots.length || !walkTo(spots[0].x, spots[0].y + 2)) return false;
+  pendingBike = target.label;
+  return true;
 }
 
 canvas.addEventListener('pointerdown', (event) => {
   if (myId === null || event.button !== 0) return;
   if (!chatForm.hidden) closeChat();
   const { camX, camY } = camera();
-  walkTo(event.clientX * dpr / scale + camX, event.clientY * dpr / scale + camY);
+  const wx = event.clientX * dpr / scale + camX;
+  const wy = event.clientY * dpr / scale + camY;
+  pendingBike = null;
+  if (!tapBike(wx, wy)) walkTo(wx, wy);
 });
 
-/** Plan a path to a clicked world position and show the destination marker. */
+/** Plan a path to a clicked world position and show the destination marker; false if it cannot be reached. */
 function walkTo(wx, wy) {
   const me = players.get(myId);
   const gx = Math.floor(wx / TILE);
   const gy = Math.floor(wy / TILE);
-  if (isSolid(gx, gy)) return;
+  if (isSolid(gx, gy)) return false;
   const tiles = findPath(Math.floor(me.x / TILE), Math.floor((me.y - 2) / TILE), gx, gy, MAP_W, MAP_H, isSolid);
-  if (!tiles) return;
+  if (!tiles) return false;
   path = tiles.map((t) => ({ x: t.x * TILE + TILE / 2, y: t.y * TILE + 10 }));
   // The last waypoint is the clicked point itself, kept far enough inside its tile for the feet box.
   const end = {
@@ -587,6 +638,7 @@ function walkTo(wx, wy) {
   else path = [end];
   stuckTime = 0;
   marker = { x: end.x, y: end.y, start: performance.now() };
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -630,6 +682,7 @@ function update(dt, now) {
   if (vx || vy) {
     path = [];
     marker = null;
+    pendingBike = null;
     const len = Math.hypot(vx, vy);
     vx /= len;
     vy /= len;
@@ -652,6 +705,12 @@ function update(dt, now) {
     if (stuckTime > 0.3) path = [];
   } else {
     stuckTime = 0;
+  }
+  if (pendingBike && !path.length) {
+    // Arrived (or gave up on a blocked path): run the tapped bike action if it is in reach now.
+    const action = bikeAction(me);
+    if (action?.label === pendingBike) action.run();
+    pendingBike = null;
   }
   me.moving = moved > 0;
   if (me.moving) me.dir = dirFor(vx, vy);
