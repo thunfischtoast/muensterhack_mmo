@@ -22,7 +22,7 @@ const TOUR = [
 /**
  * All NPCs. Walkers have a closed `route` of [x, y, wait?, say?] points in tiles and a `speed` in px/s;
  * `lag` (s) and `offset` (px) let followers trail a shared route. Others stand (`at`) or sit on a bench (`sit`).
- * `lines` are said in turn every `every` seconds (shifted by `shift`), `greet` when the own player comes close.
+ * Optional `lines` are said in turn every `every` seconds (shifted by `shift`), `greet` when the own player comes close.
  */
 export const NPCS = [
   {
@@ -31,14 +31,9 @@ export const NPCS = [
     lines: ['Pling pling!', 'Vorsicht, Radweg!', 'Pling!'], every: 15, shift: 3, greet: 'Pling! Moin!',
   },
   { name: 'Stadtführerin Gisela', look: 5, speed: 28, route: TOUR, prop: 'umbrella', greet: 'Moin! Kommen Sie mit?' },
-  {
-    name: 'Kees', look: 7, speed: 28, route: TOUR, lag: 0.9, offset: [-10, 9],
-    lines: ['Mooi!', 'Foto!', 'Gezellig!'], every: 23, shift: 5, greet: 'Hoi!',
-  },
-  {
-    name: 'Anouk', look: 13, speed: 28, route: TOUR, lag: 1.6, offset: [10, 8],
-    lines: ['Wie schön!', 'Wo gibt es Pommes?', 'Noch ein Foto!'], every: 23, shift: 16, greet: 'Hallo!',
-  },
+  // The tourists just listen, so the group does not clutter the plaza with bubbles.
+  { name: 'Kees', look: 7, speed: 28, route: TOUR, lag: 0.9, offset: [-10, 9] },
+  { name: 'Anouk', look: 13, speed: 28, route: TOUR, lag: 1.6, offset: [10, 8] },
   {
     name: 'Jogger:in Sam', look: 14, speed: 56,
     route: [[0.5, 20.5], [14.5, 20.5], [14.5, 29.4], [0.5, 29.4]],

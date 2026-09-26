@@ -1175,7 +1175,7 @@ function updateNpcs(now) {
       n.lineNo = lineNo;
     }
     if (say) n.bubble = { text: say, start: now };
-    const dist = me ? Math.hypot(me.x - n.x, me.y - n.y) : Infinity;
+    const dist = me && n.greet ? Math.hypot(me.x - n.x, me.y - n.y) : Infinity;
     if (dist < greetDist) {
       greeter = n;
       greetDist = dist;
