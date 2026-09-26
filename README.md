@@ -54,7 +54,7 @@ More small things to spot: the Lamberti clock shows the real time, the tower kee
 
 ## NPCs
 
-A few locals liven up the plaza: a commuter cycling the Promenade, a city tour (guide with umbrella and two Dutch tourists) with Münster facts at each stop, a jogger in the park, a market woman and two hackers with laptops on a bench. They follow the wall clock, so every player sees the same scene; they never block anyone and say hello when you walk up to them. Routes are checked against the collision map at load time.
+A few locals liven up the plaza: a commuter cycling the Promenade, a city tour (guide with umbrella and two Dutch tourists) with Münster facts at each stop, a jogger in the park, a market woman, two hackers with laptops on a bench, and Code for Münster (codeformuenster.org) on the bench in front of the SpecOps café, whose "?" marker mentions their Hacknight every other Tuesday. They follow the wall clock, so every player sees the same scene; they never block anyone and say hello when you walk up to them. Routes are checked against the collision map at load time.
 
 ## Achievements
 

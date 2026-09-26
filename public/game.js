@@ -60,6 +60,7 @@ const taskStatusEl = document.getElementById('task-status');
 const toastEl = document.getElementById('toast');
 const infoEl = document.getElementById('info');
 const infoNameEl = document.getElementById('info-name');
+const infoLabelEl = infoEl.querySelector('.info-label');
 const trophyButton = document.getElementById('trophy-button');
 const trophyPanel = document.getElementById('trophies');
 const trophyList = document.getElementById('trophy-list');
@@ -80,7 +81,7 @@ const objectEntries = OBJECTS.map((o) => {
   };
 });
 
-// References to earlier Münsterhack projects: footprint for the proximity check and a "?" marker spot.
+// References to earlier Münsterhack projects (and local communities, with their own label): footprint for the proximity check and a "?" marker spot.
 const infoSpots = OBJECTS.filter((o) => o.info).map((o) => ({
   ...o.info,
   x0: o.x * TILE,
@@ -500,7 +501,7 @@ function updateInfo(me) {
     return Math.hypot(dx, dy) <= INFO_REACH;
   });
   if (spot) {
-    achieve('history', spot.name);
+    if (!spot.label) achieve('history', spot.name);
     if (spot === AICHHOERNCHEN) achieve('squirrel');
     if (spot.name === 'Corndex') achieve('kiosk');
   }
@@ -508,6 +509,7 @@ function updateInfo(me) {
   if (text === infoText) return;
   infoText = text;
   infoNameEl.textContent = text;
+  if (spot) infoLabelEl.textContent = spot.label ?? 'Münsterhack-Projekt';
   infoEl.hidden = !text;
 }
 

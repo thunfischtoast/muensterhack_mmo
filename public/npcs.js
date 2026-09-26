@@ -59,6 +59,19 @@ export const NPCS = [
     lines: ['Bei mir läuft es.', 'Hat wer ein USB-C-Kabel?', 'Pitch in 10 Minuten?!', 'Ups, force-push …'],
     every: 16, shift: 8, greet: 'Moin! Kaffee ist da drüben.',
   },
+  // Code for Münster on the bench in front of the SpecOps café
+  {
+    name: 'Jan', look: 2, at: [0.65, 14], sit: true, prop: 'laptop',
+    lines: ['Hacknight: jeden zweiten Dienstag, 19:30!', 'Neue Leute sind immer willkommen!'], every: 24, shift: 0, greet: 'Moin! Komm doch mal zur Hacknight.',
+  },
+  {
+    name: 'Merle', look: 8, at: [1.5, 14], sit: true, prop: 'laptop',
+    lines: ['Open Data für Münster!', 'Kennst du codeformuenster.org?'], every: 24, shift: 8, greet: 'Moin! Wir sind Code for Münster.',
+  },
+  {
+    name: 'Kai', look: 9, at: [2.35, 14], sit: true, prop: 'laptop',
+    lines: ['Wer hat Lust auf ein neues Projekt?', 'Der Code ist natürlich Open Source.'], every: 24, shift: 16, greet: 'Hi! Setz dich dazu.',
+  },
 ];
 
 /** Precomputed legs of each route: pixel start/end, walking duration and the stop at its end. */

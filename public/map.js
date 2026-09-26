@@ -95,7 +95,6 @@ export const OBJECTS = [
   // Empty bike rack for the Leezen-Chaos mini-game
   { type: 'rack', x: 5, y: 15, w: 6, h: 1 },
   // Leezen (bicycles), in racks and parked loosely
-  { type: 'bikes', x: 2, y: 13, w: 5, h: 1, v: 0 },
   { type: 'bikes', x: 23, y: 14, w: 4, h: 1, v: 2 },
   { type: 'bikes', x: 20, y: 17, w: 3, h: 1, v: 4 },
   { type: 'bikes', x: 12, y: 19, w: 1, h: 1, v: 1 },
@@ -139,6 +138,9 @@ export const OBJECTS = [
   { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1, info: PROJECTS.leihleeze },
   { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1, info: PROJECTS.krautUndRueben },
   { type: 'kiosk', x: 34, y: 20, w: 3, h: 1, info: PROJECTS.corndex },
+  // SpecOps café with Code for Münster on the bench in front (their people are NPCs, see npcs.js)
+  { type: 'specops', x: 0, y: 11, w: 3, h: 2, info: { name: 'Code for Münster', year: 'Hacknight jeden 2. Dienstag', label: 'Community' } },
+  { type: 'bench', x: 0, y: 13, w: 3, h: 1 },
   // Aasee: pedal boats moored at the jetty
   { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
   { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },

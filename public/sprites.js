@@ -47,7 +47,7 @@ const GLYPHS = {
   A: ['010', '101', '111', '101', '101'],
   C: ['111', '100', '100', '100', '111'],
   K: ['101', '101', '110', '101', '101'],
-  P: ['110', '101', '110', '100', '100'],
+  P: ['111', '101', '111', '100', '100'],
   R: ['110', '101', '110', '101', '101'],
   I: ['111', '010', '010', '010', '111'],
   N: ['1001', '1101', '1011', '1001', '1001'],
@@ -1190,14 +1190,39 @@ function drawKiosk(ctx, f) {
   for (let i = 0; i < 4; i++) rect(ctx, '#3a7a2a', 6 + i * 2, 39, 1, 2);
 }
 
-/** Wooden bench, 32x16. */
+/** Wooden bench, as wide as its footprint, 16 high. */
 function drawBench(ctx) {
+  const w = ctx.canvas.width;
   rect(ctx, '#5a3a22', 3, 2, 2, 13);
-  rect(ctx, '#5a3a22', 27, 2, 2, 13);
-  rect(ctx, '#9a6a3a', 1, 2, 30, 2);
-  rect(ctx, '#9a6a3a', 1, 5, 30, 2);
-  rect(ctx, '#b8844a', 1, 9, 30, 2);
+  rect(ctx, '#5a3a22', w - 5, 2, 2, 13);
+  rect(ctx, '#9a6a3a', 1, 2, w - 2, 2);
+  rect(ctx, '#9a6a3a', 1, 5, w - 2, 2);
+  rect(ctx, '#b8844a', 1, 9, w - 2, 2);
   addOutline(ctx.canvas);
+}
+
+/** SpecOps café, where Code for Münster meets, 48x48: sign, striped awning, lit window with cups, door. */
+function drawSpecOps(ctx) {
+  rect(ctx, '#3a3f4a', 2, 12, 44, 36);
+  rect(ctx, '#1a1c22', 0, 4, 48, 9);
+  addOutline(ctx.canvas);
+  pixelText(ctx, 'SPEC OPS', 24 - Math.ceil(pixelTextWidth('SPEC OPS') / 2), 6, WHITE);
+  for (let i = 0; i < 11; i++) rect(ctx, i % 2 ? WHITE : '#1a1c22', 2 + i * 4, 13, 4, 3);
+  // Warm lit window with coffee cups on the sill
+  rect(ctx, BLACK, 5, 20, 24, 18);
+  rect(ctx, '#f6d98a', 6, 21, 22, 16);
+  rect(ctx, '#e8c060', 6, 21, 22, 3);
+  rect(ctx, '#8a5a2a', 6, 34, 22, 3);
+  for (const cx of [9, 16, 23]) {
+    rect(ctx, WHITE, cx, 31, 3, 3);
+    rect(ctx, WHITE, cx + 3, 32, 1, 1);
+    rect(ctx, '#6a3a1a', cx, 31, 3, 1);
+  }
+  // Door
+  rect(ctx, BLACK, 33, 25, 10, 23);
+  rect(ctx, '#5a4a3a', 34, 26, 8, 22);
+  rect(ctx, '#f6d98a', 35, 28, 6, 6);
+  rect(ctx, YELLOW, 40, 38, 1, 1);
 }
 
 /** Old-town street lamp, 16x40. */
@@ -1583,10 +1608,10 @@ export function getObjectSprite(obj, frame = 0) {
   if (canvas) return canvas;
   const sizes = {
     house: [64, 80], tower: [48, 128], church: [96, 96], dom: [96, 32], stand: [48, 40], tree: [32, 40],
-    bench: [32, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
+    bench: [obj.w * TILE, 16], lamp: [16, 40], bikes: [obj.w * TILE, 16], poolballs: [48, 34], fountain: [32, 32],
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
     bush: [16, 16], flowers: [32, 16], boat: [16, 16], rack: [obj.w * TILE, 16], leezenflow: [16, 40], bikelight: [16, 40],
-    buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48],
+    buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48], specops: [48, 48],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1618,6 +1643,7 @@ export function getObjectSprite(obj, frame = 0) {
     case 'leihleeze': drawLeihleezeSign(ctx); break;
     case 'chalkboard': drawChalkboard(ctx); break;
     case 'kiosk': drawKiosk(ctx, frame); break;
+    case 'specops': drawSpecOps(ctx); break;
   }
   objectCache.set(key, canvas);
   return canvas;
