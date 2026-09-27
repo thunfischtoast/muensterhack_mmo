@@ -86,6 +86,12 @@ export const DOORS = [
   { x: 19, y: MUSEUM_Y + 39, w: 2, h: 1, to: { x: 18 * TILE, y: 5 * TILE + 12, dir: 'down' } },
 ];
 
+/** Info on the museum house, so players standing in front learn that they can go in. */
+const MUSEUM_INFO = {
+  name: 'Münsterhack-Museum', year: 'Eintritt frei', label: 'Hier geht es rein',
+  desc: 'Lauf durch die Tür: alle Münsterhack-Projekte seit 2017, ein Raum pro Jahr.',
+};
+
 /** Earlier Münsterhack projects referenced in the world (see README). */
 const PROJECTS = {
   leihleeze: { name: 'Leihleeze', year: '2017' },
@@ -111,7 +117,7 @@ export const OBJECTS = [
   { type: 'dom', x: 7, y: 0, w: 6, h: 2 },
   // Prinzipalmarkt: gabled merchant houses with arcades; v = 5 is the historic town hall, v = 7 the museum
   ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({
-    type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i === 4 ? 7 : i, info: i === 5 ? PROJECTS.reloaded1648 : undefined,
+    type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i === 4 ? 7 : i, info: i === 5 ? PROJECTS.reloaded1648 : i === 4 ? MUSEUM_INFO : undefined,
   })),
   // St. Lamberti: nave behind the tower, Lambertibrunnen in front
   { type: 'church', x: 28, y: 3, w: 6, h: 3 },

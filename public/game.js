@@ -4,7 +4,7 @@
  */
 import {
   TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, RACK_SLOTS, birdAt, isSolid,
-  MUSEUM_Y, MUSEUM_ROOMS, doorAt,
+  MUSEUM_Y, MUSEUM_ROOMS, DOORS, doorAt,
 } from './map.js';
 import {
   buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite, getCritterSprite,
@@ -35,6 +35,8 @@ const DUST_COLORS = {
   '.': ['#3f8a35', '#6cbf55'], f: ['#9a6a3a', '#c8945a'], r: ['#8a1418', '#c42a2e'], m: ['#c4bcac', '#ebe5d8'],
 };
 const FADE_MS = 400; // black fade-in after walking through a door
+const MUSEUM_TIP_MS = 20000; // after joining, until players who never visited the museum get a hint
+const MUSEUM_DOOR = DOORS[0];
 /** Offset from the feet to where dust kicks up behind a walker or the rear wheel of a rider. */
 const DUST_BEHIND = { right: [-5, 0], left: [5, 0], down: [0, -2], up: [0, 2] };
 const RECONNECT_MS = 2000;
@@ -223,6 +225,9 @@ function handleMessage(msg) {
       hudEl.hidden = false;
       chatButton.hidden = false;
       waveButton.hidden = false;
+      if (!previous && progressCount('museum') === 0) {
+        setTimeout(() => showToast('Tipp: Das Münsterhack-Museum am Prinzipalmarkt hat geöffnet!', 5000), MUSEUM_TIP_MS);
+      }
       break;
     }
     case 'join':
@@ -1001,6 +1006,19 @@ function checkAchievements(me) {
   }
 }
 
+/** Bobbing yellow arrow above the museum door, pointing in. */
+function drawMuseumArrow(now) {
+  const x = (MUSEUM_DOOR.x + MUSEUM_DOOR.w / 2) * TILE;
+  const y = MUSEUM_DOOR.y * TILE - 10 + Math.round(Math.sin(now / 200) * 2);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 3, y - 7, 6, 6);
+  ctx.fillRect(x - 6, y - 2, 12, 2);
+  for (let i = 0; i < 5; i++) ctx.fillRect(x - 5 + i, y + i, 10 - i * 2, 1);
+  ctx.fillStyle = '#FCDD09';
+  ctx.fillRect(x - 2, y - 6, 4, 5);
+  for (let i = 0; i < 4; i++) ctx.fillRect(x - 4 + i, y - 1 + i, 8 - i * 2, 1);
+}
+
 /** Small bobbing red "?" over every object (and the squirrel) that references an earlier Münsterhack project. */
 function drawInfoMarkers(now) {
   const bob = Math.round(Math.sin(now / 250 + 1) * 1.5);
@@ -1429,6 +1447,7 @@ function render(now) {
   ctx.globalAlpha = 1;
   drawSparks(now);
   drawLeezenHints(now);
+  drawMuseumArrow(now);
   drawInfoMarkers(now);
   ctx.restore();
 

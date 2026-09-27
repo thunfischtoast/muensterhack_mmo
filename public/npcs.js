@@ -9,6 +9,7 @@ import { TILE, MUSEUM_Y, isSolid } from './map.js';
 /** Stops of the city tour on the Prinzipalmarkt: [x, y (tiles, feet), wait (s), what the guide says there]. */
 const TOUR = [
   [10.5, 5.4, 6, 'In Münster regnet es oder die Glocken läuten.'],
+  [18, 5.4, 6, 'Hier im Museum stehen alle Münsterhack-Projekte seit 2017!'],
   [21.5, 5.4, 6, 'Im Rathaus wurde 1648 der Westfälische Frieden geschlossen.'],
   [24, 5.4, 6, 'Abends bläst die Türmerin von Lamberti ins Horn.'],
   [24, 12.5],
