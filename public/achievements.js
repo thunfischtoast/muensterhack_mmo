@@ -25,7 +25,7 @@ export const ACHIEVEMENTS = [
   { id: 'kiosk', name: 'Kiosk-Kenner:in', desc: 'Besuch das Büdchen am Aasee.', hint: 'Durst?' },
   { id: 'museum', name: 'Zeitreise', desc: 'Besuch alle 10 Jahrgänge im Münsterhack-Museum.', hint: 'Ein Haus am Prinzipalmarkt hat seine Türen geöffnet.', goal: 10 },
   { id: 'curator', name: 'Kurator:in', desc: `Lies alle ${EXHIBIT_COUNT} Exponate im Museum.`, hint: 'Im Museum gibt es viel zu lesen.', goal: EXHIBIT_COUNT },
-  { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 11 Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 11 },
+  { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 10 Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 10 },
 ];
 
 const STORAGE_KEY = 'mh-achievements';

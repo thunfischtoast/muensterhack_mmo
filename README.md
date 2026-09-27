@@ -43,12 +43,11 @@ Small nods to projects from [codeformuenster/muensterhack](https://github.com/co
 - **Hack(a)Tonne** (2018): water-quality probe floating in the Aasee
 - **Kraut und Rüben** (2019) / **MüMa** (2024): chalkboard at the Wochenmarkt stalls
 - **Grüne Welle / Leezenflow** (2019): LED countdown for the bike traffic light on the Promenade
-- **Humiditree** (2019): watering bags around park trees
+- **Humiditree** (2019): a watering bag around a park tree
 - **Givebox Network** (2022) / **Kiepenkiste** (2025): sharing cabinet next to the Kiepenkerl
 - **1648_reloaded** (2023): "1648" cartouche on the Historic Town Hall
 - **Corndex** (2024): kiosk at the Aasee whose beer price rises with the noise meter
 - **Nestflix** (2025): nest box with a recording light on a Promenade tree
-- **Münster Money** (2026): advertising column with a budget pie chart near Lamberti
 - **AIchhörnchen** (2025): a squirrel that scurries across the Promenade every 30 seconds
 
 More small things to spot: the Lamberti clock shows the real time, the tower keeper blows her horn every few minutes, the Münsterhack mascot waves from a window now and then, a cat naps in an arcade, fish jump in the Aasee, the Kiepenkerl smokes his pipe, and riding through the green bike light gets you a "Grüne Welle!".

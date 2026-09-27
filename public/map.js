@@ -113,7 +113,6 @@ const PROJECTS = {
   reloaded1648: { name: '1648_reloaded', year: '2023' },
   corndex: { name: 'Corndex', year: '2024' },
   nestflix: { name: 'Nestflix', year: '2025' },
-  muensterMoney: { name: 'Münster Money', year: '2026' },
 };
 
 /**
@@ -172,8 +171,8 @@ export const OBJECTS = [
   { type: 'buddenturm', x: 38, y: 17, w: 2, h: 2 },
   // Park by the Aasee
   ...[[2, 21], [9, 21], [5, 23], [12, 24], [3, 26], [8, 27], [11, 28], [4, 17], [27, 17], [30, 17]].map(
-    // Two lindens wear Humiditree watering bags (Münsterhack 2019)
-    ([x, y], i) => (i % 3 === 0 && y < 25
+    // The first linden wears a Humiditree watering bag (Münsterhack 2019)
+    ([x, y], i) => (i === 0
       ? { type: 'tree', x, y, w: 1, h: 1, v: 0, deco: 'bag', info: PROJECTS.humiditree }
       : { type: 'tree', x, y, w: 1, h: 1, v: i % 3 }),
   ),
@@ -186,7 +185,6 @@ export const OBJECTS = [
   { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1, info: PROJECTS.leihleeze },
   { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1, info: PROJECTS.krautUndRueben },
   { type: 'kiosk', x: 34, y: 20, w: 3, h: 1, info: PROJECTS.corndex },
-  { type: 'litfass', x: 31, y: 14, w: 1, h: 1, info: PROJECTS.muensterMoney },
   // SpecOps café with Code for Münster on the bench in front (their people are NPCs, see npcs.js)
   { type: 'specops', x: 0, y: 11, w: 3, h: 2, info: { name: 'Code for Münster', year: 'Hacknight jeden 2. Dienstag', label: 'Community' } },
   { type: 'bench', x: 0, y: 13, w: 3, h: 1 },

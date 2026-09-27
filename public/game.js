@@ -516,9 +516,7 @@ function roomRead(year) {
 
 /** Count an exhibit as read; completing its room turns the doorway plate green. */
 function readExhibit(spot) {
-  if (hasProgress('curator', spot.year + ' ' + spot.name)) return;
   achieve('curator', spot.year + ' ' + spot.name);
-  if (roomRead(spot.year)) showToast('Jahrgang ' + spot.year + ' komplett angeschaut!');
 }
 
 /** Show name and year of a referenced project while standing next to it; touch the DOM only on changes. */
