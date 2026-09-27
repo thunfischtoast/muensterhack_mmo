@@ -89,7 +89,7 @@ export const NPCS = [
   {
     name: 'Besucherin Ilse', look: 6, speed: 20,
     route: [
-      ...visit('Leihleeze', 'Leihleeze! Die gibt es heute noch.'),
+      ...visit('Leihleeze', 'Leihleeze! Leezen leihen statt kaufen.'),
       ...visit('Grüne Welle', 'Grüne Welle, daraus wurde Leezenflow!'),
       ...visit('Corndex', 'Je lauter, desto teurer das Bier? Genial!'),
       ...visit('AIchhörnchen', 'Ein Eichhörnchen, das Fundsachen findet!'),

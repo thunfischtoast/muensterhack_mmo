@@ -9,7 +9,7 @@
 export const YEARS = [
   { year: '2017', fact: 'Die Skulptur Projekte kommen nur alle zehn Jahre nach Münster. 2017 sahen sie rund 650.000 Besucher:innen aus 72 Ländern.', projects: [
     ['Bus Reality', 'Sagt Busverspätungen für jede Linie und jede Haltestelle voraus.', 'bus', '1. Platz'],
-    ['Leihleeze', 'Leezen leihen statt kaufen, bis heute unter leihleeze.de.', 'bike', '2. Platz'],
+    ['Leihleeze', 'Leezen leihen statt kaufen: Fahrräder in Münster teilen.', 'bike', '2. Platz'],
     ['Familien Dashboard', 'Alles Wichtige für Familien in Münster auf einen Blick.', 'chart', '3. Platz'],
     ['Bus Factor', 'Wertet Ein- und Ausstiege in den Bussen der Stadtwerke aus.', 'bus'],
     ['Make Münster Lebenswert Again', 'Keine Beschreibung überliefert, aber der Titel sagt alles.', 'heart'],
