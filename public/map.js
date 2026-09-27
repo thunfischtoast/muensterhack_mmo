@@ -65,9 +65,11 @@ export const GROUND = [
  * Five floors with a room left and right of the carpeted corridor (x 19-20); each room holds its projects
  * in two rows along its top and bottom walls, one tile apart, so its width follows the number of projects.
  */
-export const MUSEUM_ROOMS = YEARS.map(({ year, projects }, i) => {
+export const MUSEUM_ROOMS = YEARS.map(({ year, fact, projects }, i) => {
   const w = Math.ceil(projects.length / 2) * 2 + 1;
-  return { year, count: projects.length, x: i % 2 ? 22 : 18 - w, y: MUSEUM_Y + (4 - Math.floor(i / 2)) * 6 + 1, w, h: 5 };
+  const x = i % 2 ? 22 : 18 - w;
+  // doorX: the doorway tile (in the corridor wall) with the year plate
+  return { year, fact, count: projects.length, x, y: MUSEUM_Y + (4 - Math.floor(i / 2)) * 6 + 1, w, h: 5, doorX: i % 2 ? 21 : 18 };
 });
 
 /** Museum rows, appended to GROUND: void, carved into year rooms, corridor and the entrance hall with the exit door. */
@@ -86,7 +88,7 @@ carve(19, 31, 2, 8, 'r');
 carve(18, 0, 4, 30, 'w');
 carve(19, 1, 2, 30, 'r');
 // Doorways from the corridor into the middle three rows of every room
-for (const r of MUSEUM_ROOMS) carve(r.x < 19 ? 18 : 21, r.y - MUSEUM_Y + 1, 1, 3, 'f');
+for (const r of MUSEUM_ROOMS) carve(r.doorX, r.y - MUSEUM_Y + 1, 1, 3, 'f');
 carve(19, 39, 2, 1, 'd');
 GROUND.push(...museum.map((row) => row.join('')));
 

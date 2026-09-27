@@ -3,10 +3,11 @@
  * and the boards in the entrance hall. map.js places the exhibits, sprites.js draws the icons.
  *
  * Project: [name, one-line description, icon, award?]. Icons are keys of ICONS in icons.js.
+ * `fact`: something that happened in Münster that year, shown on the room's doorway plate.
  */
 
 export const YEARS = [
-  { year: '2017', projects: [
+  { year: '2017', fact: 'Die Skulptur Projekte kommen nur alle zehn Jahre nach Münster. 2017 sahen sie rund 650.000 Besucher:innen aus 72 Ländern.', projects: [
     ['Bus Reality', 'Sagt Busverspätungen für jede Linie und jede Haltestelle voraus.', 'bus', '1. Platz'],
     ['Leihleeze', 'Leezen leihen statt kaufen, bis heute unter leihleeze.de.', 'bike', '2. Platz'],
     ['Familien Dashboard', 'Alles Wichtige für Familien in Münster auf einen Blick.', 'chart', '3. Platz'],
@@ -17,7 +18,7 @@ export const YEARS = [
     ['Münster Event', 'Keine Infos überliefert.', 'calendar'],
     ['MyStudy', 'Keine Infos überliefert.', 'book'],
   ] },
-  { year: '2018', projects: [
+  { year: '2018', fact: 'Im Mai 2018 war Münster Gastgeber des 101. Katholikentags, mit über 53.000 Dauerteilnehmenden so gut besucht wie keiner seit 1990.', projects: [
     ['Bussistant', 'Zuverlässige Abfahrtszeiten per Sprachassistent, aus Verkehrs- und Twitter-Daten.', 'bus'],
     ['FunDing', 'Dat macht Fez: Ideen, Förderer und Macher zusammenbringen.', 'coin'],
     ['Hack(a)Tonne', 'Eine Messsonde im Hafen überwacht die Wasserqualität. 2020 mit der Stadt umgesetzt.', 'drop', '1. Platz'],
@@ -28,7 +29,7 @@ export const YEARS = [
     ['Was geht', 'Event-App mit Telegram-Chatbot, der Vorschläge für die Gruppe macht.', 'chat'],
     ['Weihnachtsmarkt App', 'Der Weihnachtsmarkt auf deinem Phone.', 'xmas'],
   ] },
-  { year: '2019', projects: [
+  { year: '2019', fact: 'Im Mai 2019 rief Münster als erste Großstadt in NRW den Klimanotstand aus.', projects: [
     ['Kraut und Rüben', 'Karte und Suche für den Einkauf auf dem Wochenmarkt.', 'veg'],
     ['Flatmap', 'Heatmap der Orte in Münster, die zu deinen Wohnwünschen passen.', 'map', '3. Platz'],
     ['Münster Info Hub', 'Aktuelle Veranstaltungen für Besucher:innen und Einheimische.', 'calendar', '2. Platz, Mentorenpreis'],
@@ -38,7 +39,7 @@ export const YEARS = [
     ['MünsterBot', 'Ein Messenger-Bot, der alles rund um Münster weiß.', 'bot', '1. Platz, Publikumspreis 3. Platz'],
     ['Wasserqualitäts-Monitoring', 'Messstationen entlang eines Gewässers finden eingeleitete Verschmutzungen.', 'drop'],
   ] },
-  { year: '2020', projects: [
+  { year: '2020', fact: 'Den Münster-Tatort „Es lebe der König!“ sahen 2020 im Schnitt 13,6 Millionen Menschen, mehr als jeden anderen Film des Jahres.', projects: [
     ['TourisMS', 'Stadtführungen neu gedacht: Digitales und Analoges verwoben.', 'pin', '3. Platz'],
     ['Stadtgeschichte für die Zukunft', '50 Jahre Schülerforschung in Münster? Digitalize it!', 'book', 'Mentorenpreis'],
     ['MS Mobility', 'Eine App für smarte Mobilität in Münster.', 'phone'],
@@ -53,7 +54,7 @@ export const YEARS = [
     ['Mo:ve MS', 'Hat der Bus Verspätung, wird das Ticket zur kostenlosen Scooterfahrt.', 'bus'],
     ['ÖffiFlow', 'Wo hakt\'s? Der Bus, der sagt\'s!', 'bus'],
   ] },
-  { year: '2021', projects: [
+  { year: '2021', fact: 'Am 16. Juni 2021 zählte die Radzählstelle am Neutor rund 21.000 Radfahrende an einem einzigen Tag.', projects: [
     ['data-inspire.me', 'Zeigt spielerisch, was in Münsters Open Data steckt.', 'chart', 'Mentorenpreis'],
     ['REvent', 'Veranstaltungen in Münster digital bewerben.', 'calendar'],
     ['Nestwerk', 'Netzwerk für Familien: Kalender, Tauschbörse und Spielplatztalk.', 'heart', '2. Platz'],
@@ -67,7 +68,7 @@ export const YEARS = [
     ['MySports', 'Sport-Spots auf der Karte, um gemeinsam aktiv zu werden.', 'ball'],
     ['Münster.Dev Ideenkooperative', 'Bringt liegengebliebene Ideen mit den passenden Köpfen zusammen.', 'bulb'],
   ] },
-  { year: '2022', projects: [
+  { year: '2022', fact: 'Im November 2022 tagten die G7-Außenminister:innen im Friedenssaal des Rathauses, wo 1648 Frieden geschlossen wurde.', projects: [
     ['AppFall', 'Ein Begleiter für ressourcenschonenden Konsum: ganz Münster als Wertstoffhof.', 'recycle', '3. Platz'],
     ['fixMS', 'Einfachere Mängelmeldungen an die Stadt, sogar per Fahrradknopf.', 'wrench', '1. Platz'],
     ['Give Boxen', 'Eine digitale Community für Münsters Giveboxen.', 'gift'],
@@ -82,7 +83,7 @@ export const YEARS = [
     ['Strom///Tiger', 'Genauere Stromlastprognosen gegen steigende Strompreise.', 'bolt'],
     ['WObility?', 'Findet gute Standorte für öffentliche Ladesäulen.', 'bolt'],
   ] },
-  { year: '2023', projects: [
+  { year: '2023', fact: 'Seit Oktober 2023 heißt die Westfälische Wilhelms-Universität nur noch Universität Münster.', projects: [
     ['HinUndWeg', 'Beim Umzug Dinge spenden, reparieren lassen oder richtig entsorgen.', 'gift'],
     ['Park|Frei', 'Zeigt die Vorteile autoreduzierter Wohnviertel.', 'parking'],
     ['MEETMÜNSTER', 'KI-generierte Stadtführungen nach deinen Interessen.', 'pin', '1. Platz'],
@@ -99,7 +100,7 @@ export const YEARS = [
     ['Urban Safari', 'Insekten per KI-Fotoanalyse entdecken und Abzeichen sammeln.', 'bug'],
     ['helpwave impulse', 'Gemeinsam mit der Nachbarschaft gesünder leben.', 'cross'],
   ] },
-  { year: '2024', projects: [
+  { year: '2024', fact: 'Preußen Münster stieg 2024 in die 2. Bundesliga auf, nur ein Jahr nach dem Aufstieg aus der Regionalliga.', projects: [
     ['Corndex', 'Am Kiosk steigt der Bierpreis mit dem Lärmpegel.', 'beer', 'Publikumspreis, Mentor:innenpreis'],
     ['Münster4You', 'Ein Stadtportal von Münsteraner:innen, mit Wiki und KI-Suche.', 'book'],
     ['climate|MS', 'Macht Münsters Klimaschutzmaßnahmen transparent.', 'earth'],
@@ -112,7 +113,7 @@ export const YEARS = [
     ['StayGuide', 'Erklärt die Einbürgerung Schritt für Schritt, mit KI in einfacher Sprache.', 'doc', '2. Platz'],
     ['MüMa', 'Den Münsteraner Markt in deiner Hand.', 'veg'],
   ] },
-  { year: '2025', projects: [
+  { year: '2025', fact: 'Im September 2025 wählte Münster mit Tilman Fuchs zum ersten Mal einen grünen Oberbürgermeister.', projects: [
     ['AIchhörnchen', 'Fundsachen melden in drei Klicks, KI hilft beim Wiederfinden.', 'squirrel', '1. Platz'],
     ['Agentic.Muenster', 'Termine beim Bürgerservice per (Voice-)Chat buchen, Unterlagen inklusive.', 'bot', '2. Platz'],
     ['Blindspotter', 'Planung aus der Sicht der Menschen, die dort leben.', 'eye'],
@@ -125,7 +126,7 @@ export const YEARS = [
     ['Smart Bike', 'Intelligente Fahrassistenten für mehr Sicherheit auf der Leeze.', 'bike'],
     ['Stolperstimme', 'Münsters Stolpersteine bekommen eine Stimme.', 'mic', '3. Platz, Mentor:innenpreis'],
   ] },
-  { year: '2026', projects: [
+  { year: '2026', fact: 'Ende August 2026 feierte Münster den NRW-Tag zum 80. Geburtstag des Landes Nordrhein-Westfalen.', projects: [
     ['AccessMünster', 'Barrierefreie, schattige Routen durch Münster.', 'map'],
     ['BlinkenLights', 'Ein Gamefloor: interaktive Stadtkunst, die Menschen zusammenbringt.', 'blinken'],
     ['Crowd Control', 'Visualisiert Besuchermengen auf Messen und Volksfesten.', 'crowd'],

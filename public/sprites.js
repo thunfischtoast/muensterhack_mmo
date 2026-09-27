@@ -599,7 +599,7 @@ export function getDoorPlate(year, done) {
 
 /** Top-left of a museum room's doorway plate in world pixels. */
 export function doorPlateAt(room) {
-  return { x: (room.x < 19 ? room.x + room.w : room.x - 1) * TILE, y: (room.y + 2) * TILE + 4 };
+  return { x: room.doorX * TILE, y: (room.y + 2) * TILE + 4 };
 }
 
 /** Warm pool of light on the parquet around an award winner; first places glow golden. */

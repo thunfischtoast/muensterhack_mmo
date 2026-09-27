@@ -533,6 +533,11 @@ function updateInfo(me) {
     }
   }
   if (sq && Math.hypot(me.x - sq.x, me.y - sq.y) <= INFO_REACH + 8) spot = AICHHOERNCHEN;
+  // Standing on a museum doorway plate tells what happened in Münster that year.
+  const tx = Math.floor(me.x / TILE);
+  const ty = Math.floor((me.y - 1) / TILE);
+  const plate = MUSEUM_ROOMS.find((r) => r.doorX === tx && r.y + 2 === ty);
+  if (plate) spot = { name: 'Münster ' + plate.year, desc: plate.fact, label: 'Wusstest du?' };
   if (spot) {
     if (!spot.label) achieve('history', spot.name);
     if (spot.label === 'Münsterhack-Museum') readExhibit(spot);

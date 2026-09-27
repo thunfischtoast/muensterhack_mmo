@@ -27,7 +27,7 @@ const TOUR = [
 function visit(name, say) {
   const o = OBJECTS.find((e) => e.type === 'exhibit' && e.info.name === name);
   const room = MUSEUM_ROOMS.find((r) => r.year === o.info.year);
-  const aisle = room.x < 19 ? 19.5 : 20.5;
+  const aisle = room.doorX < 19 ? 19.5 : 20.5;
   const door = room.y + 2.5;
   return [[aisle, door], [o.x + 0.5, door], [o.x + 0.5, o.y + 1.6, 7, say], [o.x + 0.5, door], [aisle, door]];
 }
