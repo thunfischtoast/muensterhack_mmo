@@ -181,7 +181,7 @@ export const OBJECTS = [
   { type: 'flowers', x: 18, y: 16, w: 2, h: 1 },
   // Easter eggs for earlier Münsterhack projects
   { type: 'buoy', x: 16, y: 26, w: 1, h: 1, info: PROJECTS.hackatonne },
-  { type: 'givebox', x: 8, y: 11, w: 1, h: 1, info: PROJECTS.givebox },
+  { type: 'givebox', x: 7, y: 19, w: 1, h: 1, info: PROJECTS.givebox },
   { type: 'leihleeze', x: 27, y: 14, w: 1, h: 1, info: PROJECTS.leihleeze },
   { type: 'chalkboard', x: 4, y: 8, w: 1, h: 1, info: PROJECTS.krautUndRueben },
   { type: 'kiosk', x: 34, y: 20, w: 3, h: 1, info: PROJECTS.corndex },

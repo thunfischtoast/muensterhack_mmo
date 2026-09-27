@@ -44,7 +44,7 @@ Small nods to projects from [codeformuenster/muensterhack](https://github.com/co
 - **Kraut und Rüben** (2019) / **MüMa** (2024): chalkboard at the Wochenmarkt stalls
 - **Grüne Welle / Leezenflow** (2019): LED countdown for the bike traffic light on the Promenade
 - **Humiditree** (2019): a watering bag around a park tree
-- **Givebox Network** (2022) / **Kiepenkiste** (2025): sharing cabinet next to the Kiepenkerl
+- **Givebox Network** (2022) / **Kiepenkiste** (2025): sharing cabinet next to the bench in the park
 - **1648_reloaded** (2023): "1648" cartouche on the Historic Town Hall
 - **Corndex** (2024): kiosk at the Aasee whose beer price rises with the noise meter
 - **Nestflix** (2025): nest box with a recording light on a Promenade tree
