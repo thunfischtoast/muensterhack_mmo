@@ -95,8 +95,8 @@ const infoSpots = OBJECTS.filter((o) => o.info).map((o) => ({
   x1: (o.x + o.w) * TILE,
   y1: (o.y + o.h) * TILE,
   markX: (o.x + o.w / 2) * TILE,
-  // Exhibits stand close together, so their marker hugs the icon and stays below the room above.
-  markY: (o.y + o.h) * TILE - Math.min(getObjectSprite(o).height, 48) - (o.type === 'exhibit' ? 8 : 12),
+  // Museum exhibits are obviously exhibits, so they go without a marker.
+  markY: o.type === 'exhibit' ? null : (o.y + o.h) * TILE - Math.min(getObjectSprite(o).height, 48) - 12,
 }));
 
 const players = new Map();
@@ -1023,7 +1023,8 @@ function drawMuseumArrow(now) {
 function drawInfoMarkers(now) {
   const bob = Math.round(Math.sin(now / 250 + 1) * 1.5);
   const sq = squirrelAt(wallTime());
-  const spots = sq ? [...infoSpots, { markX: sq.x, markY: sq.y - 24 }] : infoSpots;
+  const marked = infoSpots.filter((s) => s.markY !== null);
+  const spots = sq ? [...marked, { markX: sq.x, markY: sq.y - 24 }] : marked;
   for (const s of spots) {
     const x = Math.round(s.markX) - 3;
     const y = Math.round(s.markY) + bob;
