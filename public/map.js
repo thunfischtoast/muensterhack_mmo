@@ -61,24 +61,34 @@ export const GROUND = [
 ];
 
 /**
- * Museum rows, appended to GROUND: five floors of two year rooms (exhibits along their top and bottom
- * walls, doorways to the carpeted corridor in the middle), then the entrance hall with the exit door.
+ * Year rooms (tiles): interior rectangle, oldest at the bottom left next to the hall, 2026 at the top right.
+ * Five floors with a room left and right of the carpeted corridor (x 19-20); each room holds its projects
+ * in two rows along its top and bottom walls, one tile apart, so its width follows the number of projects.
  */
-const EXHIBIT_ROW = 'w' + 'f'.repeat(16) + 'wrrrrw' + 'f'.repeat(16) + 'w';
-const DOOR_ROW = 'w' + 'f'.repeat(17) + 'rrrr' + 'f'.repeat(17) + 'w';
-const FLOOR_WALL = 'w'.repeat(18) + 'rrrr' + 'w'.repeat(18);
-GROUND.push(
-  'w'.repeat(MAP_W),
-  ...[0, 1, 2, 3, 4].flatMap(() => [EXHIBIT_ROW, DOOR_ROW, DOOR_ROW, DOOR_ROW, EXHIBIT_ROW, FLOOR_WALL]),
-  ...Array(8).fill('________w' + 'm'.repeat(10) + 'rr' + 'm'.repeat(10) + 'w________'),
-  '________' + 'w'.repeat(11) + 'dd' + 'w'.repeat(11) + '________',
-);
-
-/** Year rooms (tiles): interior rectangle, oldest at the bottom left next to the hall, 2026 at the top right. */
-export const MUSEUM_ROOMS = YEARS.map(({ year }, i) => {
-  const floor = 4 - Math.floor(i / 2);
-  return { year, x: i % 2 ? 23 : 1, y: MUSEUM_Y + floor * 6 + 1, w: 16, h: 5 };
+export const MUSEUM_ROOMS = YEARS.map(({ year, projects }, i) => {
+  const w = Math.ceil(projects.length / 2) * 2 + 1;
+  return { year, x: i % 2 ? 22 : 18 - w, y: MUSEUM_Y + (4 - Math.floor(i / 2)) * 6 + 1, w, h: 5 };
 });
+
+/** Museum rows, appended to GROUND: void, carved into year rooms, corridor and the entrance hall with the exit door. */
+const museum = Array.from({ length: MAP_H - MUSEUM_Y }, () => Array(MAP_W).fill('_'));
+const carve = (x, y, w, h, c) => {
+  for (let ty = y; ty < y + h; ty++) museum[ty].fill(c, x, x + w);
+};
+for (const r of MUSEUM_ROOMS) {
+  const y = r.y - MUSEUM_Y;
+  carve(r.x - 1, y - 1, r.w + 2, r.h + 2, 'w');
+  carve(r.x, y, r.w, r.h, 'f');
+}
+carve(8, 30, 24, 10, 'w');
+carve(9, 31, 22, 8, 'm');
+carve(19, 31, 2, 8, 'r');
+carve(18, 0, 4, 30, 'w');
+carve(19, 1, 2, 30, 'r');
+// Doorways from the corridor into the middle three rows of every room
+for (const r of MUSEUM_ROOMS) carve(r.x < 19 ? 18 : 21, r.y - MUSEUM_Y + 1, 1, 3, 'f');
+carve(19, 39, 2, 1, 'd');
+GROUND.push(...museum.map((row) => row.join('')));
 
 /** Walking onto a door tile moves the player to `to` (feet in pixels): the museum house and the hall exit. */
 export const DOORS = [
@@ -183,11 +193,14 @@ export const OBJECTS = [
   // Aasee: pedal boats moored at the jetty
   { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
   { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },
-  // Museum: one exhibit per project, eight along the top wall of its year room, the rest along the bottom
+  // Museum: one exhibit per project, the first half along the top wall of its year room, the rest along the
+  // bottom; with an odd count the shorter bottom row is shifted by a tile to stay centered.
   ...YEARS.flatMap(({ year, projects }, i) => projects.map(([name, desc, icon, award], j) => {
     const room = MUSEUM_ROOMS[i];
+    const top = Math.ceil(projects.length / 2);
+    const col = j < top ? j * 2 : (j - top) * 2 + (top * 2 - projects.length);
     return {
-      type: 'exhibit', x: room.x + (i % 2) + (j % 8) * 2, y: j < 8 ? room.y : room.y + room.h - 1, w: 1, h: 1,
+      type: 'exhibit', x: room.x + 1 + col, y: j < top ? room.y : room.y + room.h - 1, w: 1, h: 1,
       deco: icon, v: award ? 1 : 0, info: { name, year, desc, award, label: 'Münsterhack-Museum' },
     };
   })),

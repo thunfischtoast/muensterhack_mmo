@@ -586,7 +586,7 @@ function bigText(ctx, text, cx, y, color, k) {
 function drawRoomYears(ctx) {
   for (const room of MUSEUM_ROOMS) {
     bigText(ctx, room.year, (room.x + room.w / 2) * TILE, (room.y + 2) * TILE + 3, '#7a4a22', 2);
-    const doorX = (room.x === 1 ? room.x + room.w : room.x - 1) * TILE;
+    const doorX = (room.x < 19 ? room.x + room.w : room.x - 1) * TILE;
     rect(ctx, BLACK, doorX, (room.y + 2) * TILE + 4, TILE, 9);
     rect(ctx, YELLOW, doorX, (room.y + 2) * TILE + 5, TILE, 7);
     pixelText(ctx, room.year, doorX + 1, (room.y + 2) * TILE + 6, BLACK);
