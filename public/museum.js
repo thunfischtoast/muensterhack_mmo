@@ -113,7 +113,7 @@ export const YEARS = [
     ['StayGuide', 'Erklärt die Einbürgerung Schritt für Schritt, mit KI in einfacher Sprache.', 'doc', '2. Platz'],
     ['MüMa', 'Den Münsteraner Markt in deiner Hand.', 'veg'],
   ] },
-  { year: '2025', fact: 'Im September 2025 wählte Münster mit Tilman Fuchs zum ersten Mal einen grünen Oberbürgermeister.', projects: [
+  { year: '2025', fact: 'Im September 2025 wählte Münster mit Tilman Fuchs zum ersten Mal einen grünen Oberbürgermeister. Wie sein Vorgänger ist er Schirmherr des Münsterhacks.', projects: [
     ['AIchhörnchen', 'Fundsachen melden in drei Klicks, KI hilft beim Wiederfinden.', 'squirrel', '1. Platz'],
     ['Agentic.Muenster', 'Termine beim Bürgerservice per (Voice-)Chat buchen, Unterlagen inklusive.', 'bot', '2. Platz'],
     ['Blindspotter', 'Planung aus der Sicht der Menschen, die dort leben.', 'eye'],
