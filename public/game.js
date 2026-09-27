@@ -4,6 +4,7 @@
  */
 import {
   TILE, MAP_W, MAP_H, WORLD_W, WORLD_H, GROUND, OBJECTS, SPAWN, BIKES, BIRDS, LOOK_COUNT, RACK_SLOTS, birdAt, isSolid,
+  MUSEUM_Y, MUSEUM_ROOMS, doorAt,
 } from './map.js';
 import {
   buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite, getCritterSprite,
@@ -31,8 +32,9 @@ const GREET_GAP_MS = 5000; // between hellos of different NPCs, so a group does 
 /** Dust colors per ground type (see GROUND in map.js). */
 const DUST_COLORS = {
   c: ['#8f8a80', '#b5b0a6'], '=': ['#a08058', '#c4a57a'], t: ['#b5ad9e', '#e4ded2'], j: ['#7a5230', '#a0703f'],
-  '.': ['#3f8a35', '#6cbf55'],
+  '.': ['#3f8a35', '#6cbf55'], f: ['#9a6a3a', '#c8945a'], r: ['#8a1418', '#c42a2e'], m: ['#c4bcac', '#ebe5d8'],
 };
+const FADE_MS = 400; // black fade-in after walking through a door
 /** Offset from the feet to where dust kicks up behind a walker or the rear wheel of a rider. */
 const DUST_BEHIND = { right: [-5, 0], left: [5, 0], down: [0, -2], up: [0, 2] };
 const RECONNECT_MS = 2000;
@@ -62,6 +64,7 @@ const toastEl = document.getElementById('toast');
 const infoEl = document.getElementById('info');
 const infoNameEl = document.getElementById('info-name');
 const infoLabelEl = infoEl.querySelector('.info-label');
+const infoDescEl = document.getElementById('info-desc');
 const trophyButton = document.getElementById('trophy-button');
 const trophyPanel = document.getElementById('trophies');
 const trophyList = document.getElementById('trophy-list');
@@ -90,7 +93,8 @@ const infoSpots = OBJECTS.filter((o) => o.info).map((o) => ({
   x1: (o.x + o.w) * TILE,
   y1: (o.y + o.h) * TILE,
   markX: (o.x + o.w / 2) * TILE,
-  markY: (o.y + o.h) * TILE - Math.min(getObjectSprite(o).height, 48) - 12,
+  // Exhibits stand close together, so their marker hugs the icon and stays below the room above.
+  markY: (o.y + o.h) * TILE - Math.min(getObjectSprite(o).height, 48) - (o.type === 'exhibit' ? 8 : 12),
 }));
 
 const players = new Map();
@@ -131,6 +135,7 @@ let fishSplash = { n: -1, end: true }; // which fish jump already splashed
 let prevRideY = null; // own y in the previous frame, to detect crossing the traffic light
 let lastGreenWave = -Infinity;
 let lastGreet = -Infinity;
+let fadeStart = -Infinity;
 
 // ---------------------------------------------------------------------------
 // Networking
@@ -499,21 +504,30 @@ function updateTask() {
 /** Show name and year of a referenced project while standing next to it; touch the DOM only on changes. */
 function updateInfo(me) {
   const sq = squirrelAt(wallTime());
-  const spot = sq && Math.hypot(me.x - sq.x, me.y - sq.y) <= INFO_REACH + 8 ? AICHHOERNCHEN : infoSpots.find((s) => {
-    const dx = me.x - Math.min(s.x1, Math.max(s.x0, me.x));
-    const dy = me.y - Math.min(s.y1, Math.max(s.y0, me.y));
-    return Math.hypot(dx, dy) <= INFO_REACH;
-  });
+  // Nearest spot in reach: museum exhibits stand only one tile apart.
+  let spot = null;
+  let best = INFO_REACH;
+  for (const s of infoSpots) {
+    const d = Math.hypot(me.x - Math.min(s.x1, Math.max(s.x0, me.x)), me.y - Math.min(s.y1, Math.max(s.y0, me.y)));
+    if (d <= best) {
+      spot = s;
+      best = d;
+    }
+  }
+  if (sq && Math.hypot(me.x - sq.x, me.y - sq.y) <= INFO_REACH + 8) spot = AICHHOERNCHEN;
   if (spot) {
     if (!spot.label) achieve('history', spot.name);
     if (spot === AICHHOERNCHEN) achieve('squirrel');
     if (spot.name === 'Corndex') achieve('kiosk');
   }
-  const text = spot ? spot.name + ' · ' + spot.year : '';
+  const text = spot ? (spot.year ? spot.name + ' · ' + spot.year : spot.name) : '';
   if (text === infoText) return;
   infoText = text;
   infoNameEl.textContent = text;
   if (spot) infoLabelEl.textContent = spot.label ?? 'Münsterhack-Projekt';
+  // Museum pieces also tell what the project was about and what it won.
+  infoDescEl.textContent = spot?.desc ? spot.desc + (spot.award ? ' 🏆 ' + spot.award : '') : '';
+  infoDescEl.hidden = !spot?.desc;
   infoEl.hidden = !text;
 }
 
@@ -673,6 +687,20 @@ function dirFor(vx, vy) {
   return vy < 0 ? 'up' : 'down';
 }
 
+/** Walk through a door: a carried Leeze stays outside, the bike is left at the door, then fade in on the other side. */
+function enterDoor(me, door, now) {
+  if (myCarry !== null) send({ t: 'drop' });
+  me.bike = null;
+  me.x = door.to.x;
+  me.y = door.to.y;
+  me.dir = door.to.dir;
+  me.moving = false;
+  path = [];
+  marker = null;
+  pendingBike = null;
+  fadeStart = now;
+}
+
 /** Advance the local player (keys or path) and interpolate remote players. */
 function update(dt, now) {
   const me = players.get(myId);
@@ -714,6 +742,8 @@ function update(dt, now) {
   }
   me.moving = moved > 0;
   if (me.moving) me.dir = dirFor(vx, vy);
+  const door = doorAt(me.x, me.y - 1);
+  if (door) enterDoor(me, door, now);
   me.walkTime = me.moving ? me.walkTime + dt : 0;
   updateBikeButton(me);
   updateTask();
@@ -764,6 +794,16 @@ function resize() {
   scale = Math.max(1, Math.round(cssScale * dpr));
 }
 
+/** Vertical pixel range of the area (city or museum) containing y; the other area stays hidden. */
+function areaBounds(y) {
+  return y >= MUSEUM_Y * TILE ? [MUSEUM_Y * TILE, WORLD_H] : [0, MUSEUM_Y * TILE];
+}
+
+/** Whether a world y lies in the same area as the camera focus. */
+function sameArea(y, focusY) {
+  return (y >= MUSEUM_Y * TILE) === (focusY >= MUSEUM_Y * TILE);
+}
+
 /** Camera top-left in world pixels: follows the own player, clamped to the map, centered if the map is smaller. */
 function camera() {
   const viewW = canvas.width / scale;
@@ -771,8 +811,11 @@ function camera() {
   const me = players.get(myId);
   const fx = me ? me.x : (SPAWN.x + SPAWN.w / 2) * TILE;
   const fy = me ? me.y - 12 : (SPAWN.y + SPAWN.h / 2) * TILE;
-  const axis = (focus, view, world) => (view >= world ? (world - view) / 2 : Math.min(world - view, Math.max(0, focus - view / 2)));
-  return { camX: axis(fx, viewW, WORLD_W), camY: axis(fy, viewH, WORLD_H) };
+  const axis = (focus, view, start, size) => (view >= size
+    ? start + (size - view) / 2
+    : Math.min(start + size - view, Math.max(start, focus - view / 2)));
+  const [y0, y1] = areaBounds(me ? me.y : fy);
+  return { camX: axis(fx, viewW, 0, WORLD_W), camY: axis(fy, viewH, y0, y1 - y0) };
 }
 
 /** Draw a player (walking or riding) with a small shadow; feet at (x, y). */
@@ -930,6 +973,7 @@ function renderTrophies() {
 
 /** Named area of a tile for "Stadtbummel", or null. */
 function areaAt(tx, ty) {
+  if (ty >= MUSEUM_Y) return null;
   const g = GROUND[ty]?.[tx];
   if (g === 't' || g === 'j') return 'aasee';
   if (tx >= 34) return ty <= 18 ? 'promenade' : null;
@@ -944,6 +988,8 @@ function checkAchievements(me) {
   const ty = Math.floor((me.y - 1) / TILE);
   const area = areaAt(tx, ty);
   if (area) achieve('stroll', area);
+  const room = MUSEUM_ROOMS.find((r) => tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h);
+  if (room) achieve('museum', room.year);
   if (me.bike !== null) achieve('bike');
   if (GROUND[ty]?.[tx] === 'j' && GROUND[ty + 1]?.[tx] === '~') achieve('jetty');
   if (Math.hypot(me.x - (CAT.x + 7), me.y - CAT.y) < 40) achieve('cat');
@@ -1335,6 +1381,14 @@ function render(now) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(scale, 0, 0, scale, -ox, -oy);
+  // Only the area the camera is in: city and museum share one map, but you cannot look from one into the other.
+  const me = players.get(myId);
+  const focusY = me ? me.y : camY;
+  const [areaTop, areaBottom] = areaBounds(focusY);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, areaTop, WORLD_W, areaBottom - areaTop);
+  ctx.clip();
   const waterFrame = Math.floor(now / 350) % WATER_FRAMES;
   ctx.drawImage(ground[waterFrame], 0, 0);
   drawMarker(now);
@@ -1376,12 +1430,20 @@ function render(now) {
   drawSparks(now);
   drawLeezenHints(now);
   drawInfoMarkers(now);
+  ctx.restore();
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const fontPx = Math.max(Math.round(11 * dpr), Math.round(scale * 3.5));
   ctx.font = `${fontPx}px "Share Tech Mono", monospace`;
-  for (const n of npcs) drawOverlay(n, now, camX, camY, fontPx, false);
-  for (const p of sortedPlayers) drawOverlay(p, now, camX, camY, fontPx);
+  for (const n of npcs) if (sameArea(n.y, focusY)) drawOverlay(n, now, camX, camY, fontPx, false);
+  for (const p of sortedPlayers) if (sameArea(p.y, focusY)) drawOverlay(p, now, camX, camY, fontPx);
+  const fade = 1 - (now - fadeStart) / FADE_MS;
+  if (fade > 0) {
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+  }
 }
 
 let lastFrame = performance.now();

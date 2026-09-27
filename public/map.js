@@ -5,9 +5,13 @@
  * tile grid, object list and collision data.
  */
 
+import { YEARS, BOARDS } from './museum.js';
+
 export const TILE = 16;
 export const MAP_W = 40;
-export const MAP_H = 30;
+/** The city fills rows 0-29; the Münsterhack museum below it is only reachable through its door. */
+export const MUSEUM_Y = 30;
+export const MAP_H = MUSEUM_Y + 40;
 export const WORLD_W = MAP_W * TILE;
 export const WORLD_H = MAP_H * TILE;
 
@@ -21,6 +25,7 @@ export const SPAWN = { x: 12, y: 11, w: 9, h: 4 };
  * Ground tiles, one character per tile.
  * '.' grass, 'c' cobblestone (Prinzipalmarkt), '=' path, 't' stone terrace steps (Aaseeterrassen),
  * 'j' wooden jetty, '~' water (Aasee, solid), 'x' roofs behind the Prinzipalmarkt (backdrop, solid).
+ * Museum: 'f' parquet, 'r' red carpet, 'm' marble, 'd' exit door, 'w' wall and '_' void (both solid).
  */
 export const GROUND = [
   'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..==..',
@@ -55,6 +60,32 @@ export const GROUND = [
   '..............tt~~~~~~~~~~~~~~~~~~~~~~~~',
 ];
 
+/**
+ * Museum rows, appended to GROUND: five floors of two year rooms (exhibits along their top and bottom
+ * walls, doorways to the carpeted corridor in the middle), then the entrance hall with the exit door.
+ */
+const EXHIBIT_ROW = 'w' + 'f'.repeat(16) + 'wrrrrw' + 'f'.repeat(16) + 'w';
+const DOOR_ROW = 'w' + 'f'.repeat(17) + 'rrrr' + 'f'.repeat(17) + 'w';
+const FLOOR_WALL = 'w'.repeat(18) + 'rrrr' + 'w'.repeat(18);
+GROUND.push(
+  'w'.repeat(MAP_W),
+  ...[0, 1, 2, 3, 4].flatMap(() => [EXHIBIT_ROW, DOOR_ROW, DOOR_ROW, DOOR_ROW, EXHIBIT_ROW, FLOOR_WALL]),
+  ...Array(8).fill('________w' + 'm'.repeat(10) + 'rr' + 'm'.repeat(10) + 'w________'),
+  '________' + 'w'.repeat(11) + 'dd' + 'w'.repeat(11) + '________',
+);
+
+/** Year rooms (tiles): interior rectangle, oldest at the bottom left next to the hall, 2026 at the top right. */
+export const MUSEUM_ROOMS = YEARS.map(({ year }, i) => {
+  const floor = 4 - Math.floor(i / 2);
+  return { year, x: i % 2 ? 23 : 1, y: MUSEUM_Y + floor * 6 + 1, w: 16, h: 5 };
+});
+
+/** Walking onto a door tile moves the player to `to` (feet in pixels): the museum house and the hall exit. */
+export const DOORS = [
+  { x: 17, y: 4, w: 2, h: 1, to: { x: 20 * TILE, y: (MUSEUM_Y + 37) * TILE + 12, dir: 'up' } },
+  { x: 19, y: MUSEUM_Y + 39, w: 2, h: 1, to: { x: 18 * TILE, y: 5 * TILE + 12, dir: 'down' } },
+];
+
 /** Earlier Münsterhack projects referenced in the world (see README). */
 const PROJECTS = {
   leihleeze: { name: 'Leihleeze', year: '2017' },
@@ -78,9 +109,9 @@ const PROJECTS = {
 export const OBJECTS = [
   // Backdrop: the two west towers of St.-Paulus-Dom peeking out behind the gables
   { type: 'dom', x: 7, y: 0, w: 6, h: 2 },
-  // Prinzipalmarkt: gabled merchant houses with arcades; v = 5 is the historic town hall
+  // Prinzipalmarkt: gabled merchant houses with arcades; v = 5 is the historic town hall, v = 7 the museum
   ...[0, 1, 2, 3, 4, 5, 6].map((i) => ({
-    type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i, info: i === 5 ? PROJECTS.reloaded1648 : undefined,
+    type: 'house', x: i * 4, y: 3, w: 4, h: 2, v: i === 4 ? 7 : i, info: i === 5 ? PROJECTS.reloaded1648 : undefined,
   })),
   // St. Lamberti: nave behind the tower, Lambertibrunnen in front
   { type: 'church', x: 28, y: 3, w: 6, h: 3 },
@@ -146,6 +177,28 @@ export const OBJECTS = [
   // Aasee: pedal boats moored at the jetty
   { type: 'boat', x: 37, y: 22, w: 1, h: 1, v: 0 },
   { type: 'boat', x: 39, y: 22, w: 1, h: 1, v: 1 },
+  // Museum: one exhibit per project, eight along the top wall of its year room, the rest along the bottom
+  ...YEARS.flatMap(({ year, projects }, i) => projects.map(([name, desc, icon, award], j) => {
+    const room = MUSEUM_ROOMS[i];
+    return {
+      type: 'exhibit', x: room.x + (i % 2) + (j % 8) * 2, y: j < 8 ? room.y : room.y + room.h - 1, w: 1, h: 1,
+      deco: icon, v: award ? 1 : 0, info: { name, year, desc, award, label: 'Münsterhack-Museum' },
+    };
+  })),
+  // Entrance hall: boards about the Münsterhack and its people, the anniversary trophy, plants and benches
+  ...BOARDS.map(([title, name, desc], i) => ({
+    type: 'board', x: [10, 13, 25, 28, 10, 28][i], y: MUSEUM_Y + (i < 4 ? 31 : 35), w: 2, h: 1,
+    deco: title, info: { name, desc, label: 'Münsterhack' },
+  })),
+  {
+    type: 'trophy', x: 19, y: MUSEUM_Y + 34, w: 2, h: 1, info: {
+      name: '10 Jahre Münsterhack', label: 'Jubiläum',
+      desc: 'Von 2017 bis 2026 über 110 Projekte, jedes in zwei Tagen gebaut. Die Räume hinter der Halle zeigen alle, Jahr für Jahr.',
+    },
+  },
+  ...[[17, 31], [22, 31], [9, 38], [30, 38]].map(([x, y]) => ({ type: 'plant', x, y: MUSEUM_Y + y, w: 1, h: 1 })),
+  { type: 'bench', x: 13, y: MUSEUM_Y + 37, w: 2, h: 1 },
+  { type: 'bench', x: 25, y: MUSEUM_Y + 37, w: 2, h: 1 },
 ];
 
 /** Number of bike colors; sprites.js defines them, the server validates the ridden bike against it. */
@@ -210,13 +263,23 @@ export const RACK_SLOTS = Array.from({ length: rack.w }, (_, i) => ({
 const solid = new Uint8Array(MAP_W * MAP_H);
 for (let y = 0; y < MAP_H; y++) {
   for (let x = 0; x < MAP_W; x++) {
-    if (GROUND[y][x] === '~' || GROUND[y][x] === 'x') solid[y * MAP_W + x] = 1;
+    if ('~xw_'.includes(GROUND[y][x])) solid[y * MAP_W + x] = 1;
   }
 }
 for (const o of OBJECTS) {
   for (let y = o.y; y < o.y + o.h; y++) {
     for (let x = o.x; x < o.x + o.w; x++) solid[y * MAP_W + x] = 1;
   }
+}
+
+// Doors are walkable, even where they are cut into a house.
+for (const d of DOORS) for (let x = d.x; x < d.x + d.w; x++) solid[d.y * MAP_W + x] = 0;
+
+/** Door whose tiles contain the pixel position, or undefined. */
+export function doorAt(px, py) {
+  const tx = Math.floor(px / TILE);
+  const ty = Math.floor(py / TILE);
+  return DOORS.find((d) => tx >= d.x && tx < d.x + d.w && ty >= d.y && ty < d.y + d.h);
 }
 
 /** Return true if the tile blocks movement; everything outside the map counts as solid. */

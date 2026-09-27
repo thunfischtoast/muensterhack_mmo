@@ -361,6 +361,12 @@ input:focus {
   font-size: 16px;
 }
 
+#info-desc {
+  max-width: 380px;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
 #notice {
   position: fixed;
   top: 12px;

@@ -19,6 +19,7 @@ export const ACHIEVEMENTS = [
   { id: 'keeper', name: 'Türmerin gehört', desc: 'Sei an Lamberti, wenn die Türmerin bläst.', hint: 'Hör mal nach oben.' },
   { id: 'mascot', name: 'Winke, winke', desc: 'Steh vor dem Fenster, wenn das Maskottchen winkt.', hint: 'Manchmal schaut jemand aus dem Fenster.' },
   { id: 'kiosk', name: 'Kiosk-Kenner:in', desc: 'Besuch das Büdchen am Aasee.', hint: 'Durst?' },
+  { id: 'museum', name: 'Zeitreise', desc: 'Besuch alle 10 Jahrgänge im Münsterhack-Museum.', hint: 'Ein Haus am Prinzipalmarkt hat seine Türen geöffnet.', goal: 10 },
   { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 11 Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 11 },
 ];
 

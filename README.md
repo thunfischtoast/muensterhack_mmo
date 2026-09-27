@@ -53,13 +53,17 @@ Small nods to projects from [codeformuenster/muensterhack](https://github.com/co
 
 More small things to spot: the Lamberti clock shows the real time, the tower keeper blows her horn every few minutes, the Münsterhack mascot waves from a window now and then, a cat naps in an arcade, fish jump in the Aasee, the Kiepenkerl smokes his pipe, and riding through the green bike light gets you a "Grüne Welle!".
 
+## Münsterhack museum
+
+The house with the red MUSEUM sign on the Prinzipalmarkt is open: walk through its door to enter, and through the lit door at the bottom of the hall to leave. The entrance hall has boards about the Münsterhack, its organizers, partners, prizes and the Nachgeha(c)kt winners, plus an anniversary trophy. A red-carpeted corridor leads to one room per year from 2017 (next to the hall) to 2026 (at the far end). Each project from the [Münsterhack archive](https://github.com/codeformuenster/muensterhack) stands on its own pedestal with an icon and a red **?**; award winners have a golden plaque. Walk up to one to read its description and award. You only see players who are in the same area as you (city or museum).
+
 ## NPCs
 
-A few locals liven up the plaza: a commuter cycling the Promenade, a city tour (guide with umbrella and two quietly listening Dutch tourists) with Münster facts at each stop, a jogger in the park, a market woman, two hackers with laptops on a bench, and Code for Münster (codeformuenster.org) on the bench in front of the SpecOps café, whose "?" marker mentions their Hacknight every other Tuesday. They follow the wall clock, so every player sees the same scene; they never block anyone and say hello when you walk up to them. Routes are checked against the collision map at load time.
+A few locals liven up the plaza (plus a guard and a visitor in the museum): a commuter cycling the Promenade, a city tour (guide with umbrella and two quietly listening Dutch tourists) with Münster facts at each stop, a jogger in the park, a market woman, two hackers with laptops on a bench, and Code for Münster (codeformuenster.org) on the bench in front of the SpecOps café, whose "?" marker mentions their Hacknight every other Tuesday. They follow the wall clock, so every player sees the same scene; they never block anyone and say hello when you walk up to them. Routes are checked against the collision map at load time.
 
 ## Achievements
 
-14 small achievements (chatting, high fives, riding, Leezen-Chaos, visiting every area, finding the easter eggs …) reward exploring. The trophy button under the task panel lists them; locked ones show a hint. Progress is stored in the browser (localStorage), not on the server.
+15 small achievements (chatting, a tour of all ten museum rooms, high fives, riding, Leezen-Chaos, visiting every area, finding the easter eggs …) reward exploring. The trophy button under the task panel lists them; locked ones show a hint. Progress is stored in the browser (localStorage), not on the server.
 
 ## Configuration
 
@@ -77,6 +81,7 @@ On startup the server hashes all files in `public/` into a version. Clients get 
 - `public/map.js`: tile map, objects and collision, shared by client and server.
 - `public/sprites.js`: procedural pixel art (characters, tiles, buildings).
 - `public/npcs.js`: NPC routes, lines and positions.
+- `public/museum.js`: museum content (all projects per year, hall boards); `public/icons.js`: the exhibit icons.
 - `public/path.js`: A* pathfinding for click/tap-to-walk.
 - `public/game.js`: client (input, networking, movement, camera, rendering).
 

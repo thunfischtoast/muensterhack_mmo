@@ -4,7 +4,8 @@
  * Everything is drawn once at native resolution (16px tiles) into offscreen
  * canvases and cached; game.js scales them up with smoothing disabled.
  */
-import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, LOOK_COUNT, bikeColor } from './map.js';
+import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, LOOK_COUNT, MUSEUM_ROOMS, bikeColor } from './map.js';
+import { ICONS, ICON_COLORS } from './icons.js';
 
 const RED = '#DA121A';
 const YELLOW = '#FCDD09';
@@ -59,6 +60,8 @@ const GLYPHS = {
   'Ü': ['101', '000', '101', '101', '111'],
   B: ['110', '101', '110', '101', '110'],
   E: ['111', '100', '110', '100', '111'],
+  G: ['111', '100', '101', '101', '111'],
+  V: ['101', '101', '101', '101', '010'],
   D: ['110', '101', '101', '101', '110'],
   '.': ['0', '0', '0', '0', '1'],
   0: ['111', '101', '101', '101', '111'],
@@ -68,6 +71,8 @@ const GLYPHS = {
   7: ['111', '001', '010', '010', '010'],
   8: ['111', '101', '111', '101', '111'],
   2: ['111', '001', '111', '100', '111'],
+  3: ['111', '001', '111', '001', '111'],
+  9: ['111', '101', '111', '001', '111'],
   6: ['111', '100', '111', '101', '111'],
   ' ': ['0', '0', '0', '0', '0'],
 };
@@ -523,6 +528,71 @@ function drawWater(ctx, tx, ty, x, y, f) {
   }
 }
 
+/** Museum ground tiles that people walk on; walls show their plastered face above these. */
+const MUSEUM_FLOORS = 'fmrd';
+
+/** Museum parquet: staggered oak planks. */
+function drawParquet(ctx, tx, ty, x, y) {
+  rect(ctx, '#b8844a', x, y, TILE, TILE);
+  for (let r = 0; r < TILE; r += 4) {
+    rect(ctx, '#9a6a3a', x, y + r + 3, TILE, 1);
+    rect(ctx, '#9a6a3a', x + ((r / 4 + tx) % 2) * 8 + 2, y + r, 1, 3);
+    rect(ctx, '#c8945a', x + Math.floor(hash(tx, ty, r) * 12), y + r + 1, 3, 1);
+  }
+}
+
+/** Red carpet with a golden border towards other ground. */
+function drawCarpet(ctx, tx, ty, x, y) {
+  rect(ctx, '#b01a20', x, y, TILE, TILE);
+  for (let i = 0; i < 4; i++) rect(ctx, '#c42a2e', x + Math.floor(hash(tx, ty, i) * 15), y + Math.floor(hash(tx, ty, i + 4) * 15));
+  if (groundAt(tx - 1, ty) !== 'r') rect(ctx, '#d8a820', x + 1, y, 1, TILE);
+  if (groundAt(tx + 1, ty) !== 'r') rect(ctx, '#d8a820', x + TILE - 2, y, 1, TILE);
+}
+
+/** Hall floor: large light and dark marble slabs. */
+function drawMarble(ctx, tx, ty, x, y) {
+  rect(ctx, (tx + ty) % 2 ? '#d4ccbc' : '#ebe5d8', x, y, TILE, TILE);
+  rect(ctx, '#c4bcac', x + Math.floor(hash(tx, ty, 1) * 10), y + Math.floor(hash(tx, ty, 2) * 14), 5, 1);
+}
+
+/** Open exit door: daylight falling in through the doorway. */
+function drawDoorway(ctx, x, y) {
+  rect(ctx, '#f6e2a8', x, y, TILE, TILE);
+  rect(ctx, '#fff4cc', x, y + 6, TILE, 10);
+  rect(ctx, '#8a5a2a', x, y + 12, TILE, 4);
+  rect(ctx, '#6a4020', x, y + 13, TILE, 1);
+}
+
+/** Museum wall: plastered face with a baseboard where the floor is in front, otherwise the dark wall top. */
+function drawWall(ctx, tx, ty, x, y) {
+  rect(ctx, '#4a3a30', x, y, TILE, TILE);
+  if (!MUSEUM_FLOORS.includes(groundAt(tx, ty + 1))) {
+    rect(ctx, '#5a4a3e', x + 1, y + 1, TILE - 2, TILE - 2);
+    return;
+  }
+  rect(ctx, '#efe6d2', x, y + 3, TILE, 10);
+  rect(ctx, '#e0d4bc', x, y + 3, TILE, 1);
+  rect(ctx, '#6a4a2a', x, y + 13, TILE, 3);
+}
+
+/** Pixel text scaled up by `k`, drawn centered on (cx, y). */
+function bigText(ctx, text, cx, y, color, k) {
+  const [canvas, tctx] = makeCanvas(pixelTextWidth(text), 5);
+  pixelText(tctx, text, 0, 0, color);
+  ctx.drawImage(canvas, Math.round(cx - (canvas.width * k) / 2), y, canvas.width * k, 5 * k);
+}
+
+/** Year inlaid in the middle of every museum room and on the plates in its doorway. */
+function drawRoomYears(ctx) {
+  for (const room of MUSEUM_ROOMS) {
+    bigText(ctx, room.year, (room.x + room.w / 2) * TILE, (room.y + 2) * TILE + 3, '#7a4a22', 2);
+    const doorX = (room.x === 1 ? room.x + room.w : room.x - 1) * TILE;
+    rect(ctx, BLACK, doorX, (room.y + 2) * TILE + 4, TILE, 9);
+    rect(ctx, YELLOW, doorX, (room.y + 2) * TILE + 5, TILE, 7);
+    pixelText(ctx, room.year, doorX + 1, (room.y + 2) * TILE + 6, BLACK);
+  }
+}
+
 /**
  * Pre-render the whole ground layer once per water animation frame.
  * @returns {HTMLCanvasElement[]}
@@ -542,10 +612,17 @@ export function buildGroundFrames() {
           case 'j': drawJetty(ctx, tx, ty, x, y); break;
           case 'x': drawRoofs(ctx, tx, ty, x, y); break;
           case '~': drawWater(ctx, tx, ty, x, y, f); break;
+          case 'f': drawParquet(ctx, tx, ty, x, y); break;
+          case 'r': drawCarpet(ctx, tx, ty, x, y); break;
+          case 'm': drawMarble(ctx, tx, ty, x, y); break;
+          case 'd': drawDoorway(ctx, x, y); break;
+          case 'w': drawWall(ctx, tx, ty, x, y); break;
+          case '_': rect(ctx, '#14181c', x, y, TILE, TILE); break;
           default: drawGrass(ctx, tx, ty, x, y);
         }
       }
     }
+    drawRoomYears(ctx);
     frames.push(canvas);
   }
   return frames;
@@ -567,6 +644,7 @@ const HOUSE_STYLES = [
   { gable: 'curved', wall: '#ead9ba', sign: RED },
   { gable: 'townhall', wall: '#d6ceb8' },
   { gable: 'pointed', wall: '#dab690', sign: YELLOW },
+  { gable: 'stepped', wall: '#e2d8c6', museum: true },
 ];
 
 /** Window with white frame and cross bars. */
@@ -640,7 +718,13 @@ function drawHouse(ctx, v) {
     rect(ctx, NAVY, 30, 10, 4, 4);
     for (const [cx, cy] of [[29, 9], [34, 9], [29, 14], [34, 14]]) rect(ctx, wall, cx, cy);
     if (gable === 'curved') rect(ctx, trim, 32 - gableHalf('curved', 17), 17, gableHalf('curved', 17) * 2, 1);
-    if (style.banner) {
+    if (style.museum) {
+      // Münsterhack museum: lettering across the facade, windows above and below
+      for (const wx of [8, 27, 47]) drawWindow(ctx, wx, 27, 9, 11);
+      rect(ctx, BLACK, 5, 41, 54, 11);
+      rect(ctx, RED, 6, 42, 52, 9);
+      pixelText(ctx, 'MUSEUM', 32 - Math.ceil(pixelTextWidth('MUSEUM') / 2), 44, WHITE);
+    } else if (style.banner) {
       // Münsterhack banner instead of the middle windows
       for (const [wx, wy] of [[8, 27], [47, 27], [8, 42], [47, 42]]) drawWindow(ctx, wx, wy, 9, 11);
       rect(ctx, BLACK, 23, 25, 18, 31);
@@ -672,6 +756,14 @@ function drawHouse(ctx, v) {
     rect(ctx, '#c8a810', 23, 25, 18, 1);
     pixelText(ctx, '1648', 32 - Math.ceil(pixelTextWidth('1648') / 2), 20, '#5a3a10');
   } else {
+    if (style.museum) {
+      // Open double door in the middle arch, lit from inside
+      rect(ctx, '#f6d98a', 27, 64, 10, 16);
+      rect(ctx, '#e8c060', 27, 64, 10, 2);
+      rect(ctx, '#6a3a1a', 25, 64, 2, 16);
+      rect(ctx, '#6a3a1a', 37, 64, 2, 16);
+      return;
+    }
     // Shop display in one arch and a hanging shop sign on a bracket
     rect(ctx, [RED, YELLOW][v % 2], [45, 25, 5][v % 3] + 4, 72, 6, 8);
     if (style.sign) {
@@ -1600,6 +1692,71 @@ function drawPoolBalls(ctx) {
   drawBall(ctx, 27, 26, 6);
 }
 
+/** Museum exhibit, 16x22: the project's icon on a pedestal; award winners get a golden plaque. */
+function drawExhibit(ctx, icon, awarded) {
+  rect(ctx, '#f4efe4', 1, 12, 14, 2);
+  rect(ctx, '#e2dccb', 2, 14, 12, 6);
+  rect(ctx, '#f4efe4', 1, 20, 14, 2);
+  if (icon === 'bike') {
+    drawBike(ctx, 0, RED, -4);
+  } else {
+    const rows = ICONS[icon];
+    const ox = 8 - Math.ceil(rows[0].length / 2);
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) if (row[x] !== '.') rect(ctx, ICON_COLORS[row[x]], ox + x, 12 - rows.length + y);
+    });
+  }
+  addOutline(ctx.canvas);
+  rect(ctx, awarded ? YELLOW : '#b8b0a0', 5, 15, 6, 3);
+  if (awarded) rect(ctx, '#c8a810', 5, 17, 6, 1);
+}
+
+/** Info board in the museum hall, 32x32: framed poster with a title, lines of text and a red Münsterhack stripe. */
+function drawBoard(ctx, title) {
+  rect(ctx, '#5a3a22', 4, 24, 2, 8);
+  rect(ctx, '#5a3a22', 26, 24, 2, 8);
+  rect(ctx, '#6a4a2a', 0, 2, 32, 23);
+  addOutline(ctx.canvas);
+  rect(ctx, '#f4efe4', 2, 4, 28, 19);
+  rect(ctx, RED, 2, 4, 28, 8);
+  pixelText(ctx, title, 16 - Math.ceil(pixelTextWidth(title) / 2), 6, WHITE);
+  for (let i = 0; i < 3; i++) rect(ctx, '#9a9a9a', 5, 14 + i * 3, i === 2 ? 14 : 22, 1);
+}
+
+/** Golden anniversary trophy on a plinth, 32x40. */
+function drawTrophy(ctx) {
+  rect(ctx, '#e2dccb', 4, 28, 24, 12);
+  rect(ctx, '#f4efe4', 2, 26, 28, 3);
+  rect(ctx, YELLOW, 9, 2, 14, 12);
+  rect(ctx, YELLOW, 10, 14, 12, 2);
+  rect(ctx, YELLOW, 12, 16, 8, 2);
+  rect(ctx, YELLOW, 14, 18, 4, 4);
+  rect(ctx, YELLOW, 11, 22, 10, 4);
+  for (const hx of [5, 24]) {
+    rect(ctx, YELLOW, hx, 4, 3, 1);
+    rect(ctx, YELLOW, hx + (hx < 16 ? 0 : 2), 4, 1, 6);
+    rect(ctx, YELLOW, hx, 10, 3, 1);
+  }
+  addOutline(ctx.canvas);
+  rect(ctx, '#fff6b0', 11, 4, 2, 6);
+  rect(ctx, '#c8a810', 20, 3, 2, 10);
+  pixelText(ctx, '10', 16 - Math.ceil(pixelTextWidth('10') / 2), 5, '#a07800');
+  rect(ctx, BLACK, 8, 31, 16, 7);
+  rect(ctx, RED, 9, 32, 14, 5);
+  pixelText(ctx, 'MS', 16 - Math.ceil(pixelTextWidth('MS') / 2), 32, WHITE);
+}
+
+/** Potted plant, 16x24. */
+function drawPlant(ctx) {
+  for (const [x, y, w, h] of [[6, 2, 4, 12], [3, 5, 4, 8], [9, 4, 4, 9], [1, 9, 4, 4], [11, 8, 4, 5]]) rect(ctx, '#3a9a3a', x, y, w, h);
+  rect(ctx, '#b8603a', 4, 15, 8, 9);
+  rect(ctx, '#b8603a', 3, 14, 10, 2);
+  addOutline(ctx.canvas);
+  rect(ctx, '#7cd05a', 7, 3, 1, 8);
+  rect(ctx, '#2a6a2a', 4, 7, 1, 5);
+  rect(ctx, '#d8805a', 4, 15, 1, 8);
+}
+
 const objectCache = new Map();
 
 /** Leezenflow and its bike traffic light: green for the first half of the cycle, red for the second. */
@@ -1635,6 +1792,7 @@ export function getObjectSprite(obj, frame = 0) {
     stall: [48, 40], kiepenkerl: [16, 32], streetsign: [70, 26], bikesign: [16, 32], buddenturm: [32, 64],
     bush: [16, 16], flowers: [32, 16], boat: [16, 16], rack: [obj.w * TILE, 16], leezenflow: [16, 40], bikelight: [16, 40],
     buoy: [16, 16], givebox: [16, 32], leihleeze: [44, 26], chalkboard: [28, 28], kiosk: [48, 48], litfass: [16, 40], specops: [48, 48],
+    exhibit: [16, 22], board: [32, 32], trophy: [32, 40], plant: [16, 24],
   };
   let ctx;
   [canvas, ctx] = makeCanvas(...sizes[obj.type]);
@@ -1668,6 +1826,10 @@ export function getObjectSprite(obj, frame = 0) {
     case 'kiosk': drawKiosk(ctx, frame); break;
     case 'specops': drawSpecOps(ctx); break;
     case 'litfass': drawLitfass(ctx); break;
+    case 'exhibit': drawExhibit(ctx, obj.deco, v === 1); break;
+    case 'board': drawBoard(ctx, obj.deco); break;
+    case 'trophy': drawTrophy(ctx); break;
+    case 'plant': drawPlant(ctx); break;
   }
   objectCache.set(key, canvas);
   return canvas;
