@@ -132,7 +132,7 @@ export const YEARS = [
     ['dome.ms', 'Eine Web Application Firewall als Genossenschaft, betrieben vor Ort.', 'shield', '3. Platz, Mentor:innenpreis'],
     ['Kiep\'em Cool', 'Persönliche Hitzetipps aus Open Data, Standort und Live-Wetter.', 'thermo'],
     ['Leezenpass', 'Schlägt gute Taten vor, zum Beispiel gestohlene Leezen finden.', 'bike'],
-    ['Münster Money', 'Der Haushalt 2026/27 als interaktive Diagramme.', 'coin', '1. Platz'],
+    ['Münster Money', 'Der Haushalt 2026/27 als interaktive Seite mit Planspiel.', 'coin', '1. Platz'],
     ['Münster-Pager', 'Erreichbar bleiben ganz ohne Handynetz, mit GPS.', 'pager', '2. Platz'],
     ['MünsterMatch', 'Aktivitäten, die zu deinen Vorlieben passen.', 'star'],
     ['notfall.ms', 'Offlinefähige Infos und Kommunikation für den Krisenfall.', 'siren'],
