@@ -4,8 +4,8 @@
  * Everything is drawn once at native resolution (16px tiles) into offscreen
  * canvases and cached; game.js scales them up with smoothing disabled.
  */
-import { TILE, MAP_W, MAP_H, GROUND, BIKE_COLOR_COUNT, LOOK_COUNT, MUSEUM_ROOMS, bikeColor } from './map.js';
-import { ICONS, ICON_COLORS } from './icons.js';
+import { TILE, MAP_W, MAP_H, GROUND, OBJECTS, BIKE_COLOR_COUNT, LOOK_COUNT, MUSEUM_ROOMS, bikeColor } from './map.js';
+import { ICONS, ICON_COLORS, ICON_FRAMES } from './icons.js';
 
 const RED = '#DA121A';
 const YELLOW = '#FCDD09';
@@ -61,6 +61,7 @@ const GLYPHS = {
   B: ['110', '101', '110', '101', '110'],
   E: ['111', '100', '110', '100', '111'],
   G: ['111', '100', '101', '101', '111'],
+  J: ['001', '001', '001', '101', '111'],
   V: ['101', '101', '101', '101', '010'],
   D: ['110', '101', '101', '101', '110'],
   '.': ['0', '0', '0', '0', '1'],
@@ -582,14 +583,48 @@ function bigText(ctx, text, cx, y, color, k) {
   ctx.drawImage(canvas, Math.round(cx - (canvas.width * k) / 2), y, canvas.width * k, 5 * k);
 }
 
-/** Year inlaid in the middle of every museum room and on the plates in its doorway. */
-function drawRoomYears(ctx) {
+const plateCache = new Map();
+
+/** Doorway plate of a museum room, 16x9: year on yellow, or on green once every exhibit in it was read. */
+export function getDoorPlate(year, done) {
+  const key = year + done;
+  if (plateCache.has(key)) return plateCache.get(key);
+  const [canvas, ctx] = makeCanvas(TILE, 9);
+  plateCache.set(key, canvas);
+  rect(ctx, BLACK, 0, 0, TILE, 9);
+  rect(ctx, done ? '#3cc86a' : YELLOW, 0, 1, TILE, 7);
+  pixelText(ctx, year, 1, 2, BLACK);
+  return canvas;
+}
+
+/** Top-left of a museum room's doorway plate in world pixels. */
+export function doorPlateAt(room) {
+  return { x: (room.x < 19 ? room.x + room.w : room.x - 1) * TILE, y: (room.y + 2) * TILE + 4 };
+}
+
+/** Warm pool of light on the parquet around an award winner; first places glow golden. */
+function drawSpotlight(ctx, o) {
+  const cx = o.x * TILE + 8;
+  const cy = (o.y + 1) * TILE - 2;
+  const color = /1. Platz/.test(o.info.award) ? 'rgba(255, 214, 80, 0.4)' : 'rgba(255, 244, 210, 0.35)';
+  for (let y = -6; y <= 6; y++) {
+    for (let x = -12; x <= 12; x++) {
+      if ((x / 12) ** 2 + (y / 6) ** 2 > 1 || groundAt(Math.floor((cx + x) / TILE), Math.floor((cy + y) / TILE)) !== 'f') continue;
+      rect(ctx, color, cx + x, cy + y);
+    }
+  }
+}
+
+/** Museum floor decor: light pools for award winners, year and project count inlaid in every room, doorway plates. */
+function drawMuseumDecor(ctx) {
+  for (const o of OBJECTS) if (o.type === 'exhibit' && o.info.award) drawSpotlight(ctx, o);
   for (const room of MUSEUM_ROOMS) {
-    bigText(ctx, room.year, (room.x + room.w / 2) * TILE, (room.y + 2) * TILE + 3, '#7a4a22', 2);
-    const doorX = (room.x < 19 ? room.x + room.w : room.x - 1) * TILE;
-    rect(ctx, BLACK, doorX, (room.y + 2) * TILE + 4, TILE, 9);
-    rect(ctx, YELLOW, doorX, (room.y + 2) * TILE + 5, TILE, 7);
-    pixelText(ctx, room.year, doorX + 1, (room.y + 2) * TILE + 6, BLACK);
+    const cx = (room.x + room.w / 2) * TILE;
+    bigText(ctx, room.year, cx, (room.y + 2) * TILE, '#7a4a22', 2);
+    const count = room.count + ' PROJEKTE';
+    pixelText(ctx, count, Math.round(cx - pixelTextWidth(count) / 2), (room.y + 2) * TILE + 12, '#8a5a2a');
+    const plate = doorPlateAt(room);
+    ctx.drawImage(getDoorPlate(room.year, false), plate.x, plate.y);
   }
 }
 
@@ -622,7 +657,7 @@ export function buildGroundFrames() {
         }
       }
     }
-    drawRoomYears(ctx);
+    drawMuseumDecor(ctx);
     frames.push(canvas);
   }
   return frames;
@@ -1693,7 +1728,7 @@ function drawPoolBalls(ctx) {
 }
 
 /** Museum exhibit, 16x22: the project's icon on a pedestal; award winners get a golden plaque. */
-function drawExhibit(ctx, icon, awarded) {
+function drawExhibit(ctx, icon, awarded, frame) {
   rect(ctx, '#f4efe4', 1, 12, 14, 2);
   rect(ctx, '#e2dccb', 2, 14, 12, 6);
   rect(ctx, '#f4efe4', 1, 20, 14, 2);
@@ -1701,9 +1736,10 @@ function drawExhibit(ctx, icon, awarded) {
     drawBike(ctx, 0, RED, -4);
   } else {
     const rows = ICONS[icon];
+    const colors = { ...ICON_COLORS, ...ICON_FRAMES[icon]?.frames[frame] };
     const ox = 8 - Math.ceil(rows[0].length / 2);
     rows.forEach((row, y) => {
-      for (let x = 0; x < row.length; x++) if (row[x] !== '.') rect(ctx, ICON_COLORS[row[x]], ox + x, 12 - rows.length + y);
+      for (let x = 0; x < row.length; x++) if (row[x] !== '.' && colors[row[x]]) rect(ctx, colors[row[x]], ox + x, 12 - rows.length + y);
     });
   }
   addOutline(ctx.canvas);
@@ -1775,6 +1811,12 @@ export const ANIMATED_OBJECTS = {
   kiosk: { frames: KIOSK_LEVELS.length, ms: 700 },
 };
 
+/** Animation of a map object (frame count and ms), or undefined; museum exhibits animate by their icon. */
+export function objectAnimation(obj) {
+  const icon = obj.type === 'exhibit' && ICON_FRAMES[obj.deco];
+  return icon ? { frames: icon.frames.length, ms: icon.ms } : ANIMATED_OBJECTS[obj.type];
+}
+
 /**
  * Return the cached sprite canvas for a map object.
  * @param {{type: string, w: number, v?: number}} obj
@@ -1826,7 +1868,7 @@ export function getObjectSprite(obj, frame = 0) {
     case 'kiosk': drawKiosk(ctx, frame); break;
     case 'specops': drawSpecOps(ctx); break;
     case 'litfass': drawLitfass(ctx); break;
-    case 'exhibit': drawExhibit(ctx, obj.deco, v === 1); break;
+    case 'exhibit': drawExhibit(ctx, obj.deco, v === 1, frame); break;
     case 'board': drawBoard(ctx, obj.deco); break;
     case 'trophy': drawTrophy(ctx); break;
     case 'plant': drawPlant(ctx); break;

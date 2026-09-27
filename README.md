@@ -55,7 +55,7 @@ More small things to spot: the Lamberti clock shows the real time, the tower kee
 
 ## Münsterhack museum
 
-The house with the red MUSEUM sign on the Prinzipalmarkt is open (a yellow arrow points at its door, the city guide stops there, and new visitors get a tip after 20 seconds): walk through the door to enter, and through the lit door at the bottom of the hall to leave. The entrance hall has boards about the Münsterhack, its organizers, partners, prizes and the Nachgeha(c)kt winners, plus an anniversary trophy. A red-carpeted corridor leads to one room per year from 2017 (next to the hall) to 2026 (at the far end). Each project from the [Münsterhack archive](https://github.com/codeformuenster/muensterhack) stands on its own pedestal with an icon; award winners have a golden plaque. Walk up to one to read its description and award. You only see players who are in the same area as you (city or museum).
+The house with the red MUSEUM sign on the Prinzipalmarkt is open (a yellow arrow points at its door, the city guide stops there, and new visitors get a tip after 20 seconds): walk through the door to enter, and through the lit door at the bottom of the hall to leave. The entrance hall has boards about the Münsterhack, its organizers, partners, prizes and the Nachgeha(c)kt winners, plus an anniversary trophy. A red-carpeted corridor leads to one room per year from 2017 (next to the hall) to 2026 (at the far end). Each project from the [Münsterhack archive](https://github.com/codeformuenster/muensterhack) stands on its own pedestal with an icon (a few of them animated); award winners have a golden plaque and a pool of light, golden for first places. Each room shows its year and number of projects on the floor. Walk up to an exhibit to read its description and award; once you have read every exhibit of a year, its doorway plate turns green. Visitor Ilse walks into some rooms and comments on her favourite projects. You only see players who are in the same area as you (city or museum).
 
 ## NPCs
 
@@ -63,7 +63,7 @@ A few locals liven up the plaza (plus a guard and a visitor in the museum): a co
 
 ## Achievements
 
-15 small achievements (chatting, a tour of all ten museum rooms, high fives, riding, Leezen-Chaos, visiting every area, finding the easter eggs …) reward exploring. The trophy button under the task panel lists them; locked ones show a hint. Progress is stored in the browser (localStorage), not on the server.
+16 small achievements (chatting, a tour of all ten museum rooms, reading every exhibit, high fives, riding, Leezen-Chaos, visiting every area, finding the easter eggs …) reward exploring. The trophy button under the task panel lists them; locked ones show a hint. Progress is stored in the browser (localStorage), not on the server.
 
 ## Configuration
 

@@ -67,7 +67,7 @@ export const GROUND = [
  */
 export const MUSEUM_ROOMS = YEARS.map(({ year, projects }, i) => {
   const w = Math.ceil(projects.length / 2) * 2 + 1;
-  return { year, x: i % 2 ? 22 : 18 - w, y: MUSEUM_Y + (4 - Math.floor(i / 2)) * 6 + 1, w, h: 5 };
+  return { year, count: projects.length, x: i % 2 ? 22 : 18 - w, y: MUSEUM_Y + (4 - Math.floor(i / 2)) * 6 + 1, w, h: 5 };
 });
 
 /** Museum rows, appended to GROUND: void, carved into year rooms, corridor and the entrance hall with the exit door. */

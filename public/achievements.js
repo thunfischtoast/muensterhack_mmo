@@ -3,6 +3,10 @@
  *
  * Purely for fun and exploration, so there is no server side and no cheat protection.
  */
+import { YEARS } from './museum.js';
+
+/** Number of museum exhibits, one per project. */
+const EXHIBIT_COUNT = YEARS.reduce((sum, y) => sum + y.projects.length, 0);
 
 /** All achievements; `goal` marks ones that need several distinct steps (areas, discovered projects). */
 export const ACHIEVEMENTS = [
@@ -20,6 +24,7 @@ export const ACHIEVEMENTS = [
   { id: 'mascot', name: 'Winke, winke', desc: 'Steh vor dem Fenster, wenn das Maskottchen winkt.', hint: 'Manchmal schaut jemand aus dem Fenster.' },
   { id: 'kiosk', name: 'Kiosk-Kenner:in', desc: 'Besuch das Büdchen am Aasee.', hint: 'Durst?' },
   { id: 'museum', name: 'Zeitreise', desc: 'Besuch alle 10 Jahrgänge im Münsterhack-Museum.', hint: 'Ein Haus am Prinzipalmarkt hat seine Türen geöffnet.', goal: 10 },
+  { id: 'curator', name: 'Kurator:in', desc: `Lies alle ${EXHIBIT_COUNT} Exponate im Museum.`, hint: 'Im Museum gibt es viel zu lesen.', goal: EXHIBIT_COUNT },
   { id: 'history', name: 'Hack-Historiker:in', desc: 'Entdeck alle 11 Münsterhack-Projekte.', hint: 'Achte auf die roten Fragezeichen.', goal: 11 },
 ];
 
@@ -61,6 +66,11 @@ export function progress(id, step) {
   steps.push(step);
   save();
   return steps.length >= ACHIEVEMENTS.find((a) => a.id === id).goal ? unlock(id) : null;
+}
+
+/** Whether a distinct step towards a goal achievement was recorded. */
+export function hasProgress(id, step) {
+  return (state.progress[id] || []).includes(step);
 }
 
 /** Number of distinct steps recorded for a goal achievement. */

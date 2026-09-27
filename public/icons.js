@@ -503,3 +503,17 @@ export const ICONS = {
     'SSSSSSSS',
   ],
 };
+
+/**
+ * Animated icons: frame duration and one color override per frame ({char: color}, null hides the pixels).
+ * Frames follow the wall clock like the other animated objects.
+ */
+const OFF = '#333';
+const [R, Y, G, B] = [ICON_COLORS.r, ICON_COLORS.y, ICON_COLORS.g, ICON_COLORS.b];
+export const ICON_FRAMES = {
+  light: { ms: 1000, frames: [{ y: OFF, l: OFF }, { r: OFF, l: OFF }, { r: OFF, y: OFF }] },
+  siren: { ms: 300, frames: [{}, { r: '#8a0a10', y: null }] },
+  pager: { ms: 600, frames: [{}, { l: '#3a8a2a', r: '#6a1010' }] },
+  nest: { ms: 900, frames: [{}, {}, {}, { k: Y }] },
+  blinken: { ms: 400, frames: [{}, { r: Y, y: G, g: B, b: R }, { r: G, y: B, g: R, b: Y }, { r: B, y: R, g: Y, b: G }] },
+};

@@ -4,7 +4,7 @@
  * Positions and chatter are functions of the wall clock, so every client shows the same
  * scene without any server state. NPCs are purely visual and never block anyone.
  */
-import { TILE, MUSEUM_Y, isSolid } from './map.js';
+import { TILE, MUSEUM_Y, MUSEUM_ROOMS, OBJECTS, isSolid } from './map.js';
 
 /** Stops of the city tour on the Prinzipalmarkt: [x, y (tiles, feet), wait (s), what the guide says there]. */
 const TOUR = [
@@ -19,6 +19,18 @@ const TOUR = [
   [13.5, 8.5, 6, 'Münster hat mehr Leezen als Einwohner:innen!'],
   [10.5, 8.5],
 ];
+
+/**
+ * Route points for a museum visitor: from the corridor through the doorway to the front of an exhibit
+ * in the top row, a comment there, and back to the corridor.
+ */
+function visit(name, say) {
+  const o = OBJECTS.find((e) => e.type === 'exhibit' && e.info.name === name);
+  const room = MUSEUM_ROOMS.find((r) => r.year === o.info.year);
+  const aisle = room.x < 19 ? 19.5 : 20.5;
+  const door = room.y + 2.5;
+  return [[aisle, door], [o.x + 0.5, door], [o.x + 0.5, o.y + 1.6, 7, say], [o.x + 0.5, door], [aisle, door]];
+}
 
 /**
  * All NPCs. Walkers have a closed `route` of [x, y, wait?, say?] points in tiles and a `speed` in px/s;
@@ -76,8 +88,12 @@ export const NPCS = [
   },
   {
     name: 'Besucherin Ilse', look: 6, speed: 20,
-    route: [[19.5, MUSEUM_Y + 29], [19.5, MUSEUM_Y + 21, 8], [19.5, MUSEUM_Y + 9, 8], [19.5, MUSEUM_Y + 3, 8], [20.5, MUSEUM_Y + 15, 8]],
-    lines: ['Ach, das gab es auch schon?', 'So viele Leezen-Projekte!', 'Das hätte ich gern in echt.'], every: 20, shift: 11,
+    route: [
+      ...visit('Leihleeze', 'Leihleeze! Die gibt es heute noch.'),
+      ...visit('Grüne Welle', 'Grüne Welle, daraus wurde Leezenflow!'),
+      ...visit('Corndex', 'Je lauter, desto teurer das Bier? Genial!'),
+      ...visit('AIchhörnchen', 'Ein Eichhörnchen, das Fundsachen findet!'),
+    ],
   },
 ];
 

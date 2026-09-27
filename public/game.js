@@ -8,11 +8,11 @@ import {
 } from './map.js';
 import {
   buildGroundFrames, getObjectSprite, getCharacterSprite, getRiderSprite, getBirdSprite, getLooseBikeSprite, getCritterSprite,
-  CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS,
+  CHAR_W, CHAR_H, RIDE_W, RIDE_H, RIDE_LIFT, WATER_FRAMES, ANIMATED_OBJECTS, objectAnimation, getDoorPlate, doorPlateAt,
 } from './sprites.js';
 import { findPath } from './path.js';
 import { NPCS, npcAt } from './npcs.js';
-import { ACHIEVEMENTS, unlock, progress, progressCount, isUnlocked, unlockedCount } from './achievements.js';
+import { ACHIEVEMENTS, unlock, progress, progressCount, hasProgress, isUnlocked, unlockedCount } from './achievements.js';
 
 const SPEED = 72; // pixels per second
 const RIDE_SPEED = 140;
@@ -76,7 +76,7 @@ const lookCtx = lookPreview.getContext('2d');
 const ground = buildGroundFrames();
 // Objects never move, so their draw order entries are built once; animated ones keep one sprite per frame.
 const objectEntries = OBJECTS.map((o) => {
-  const anim = ANIMATED_OBJECTS[o.type];
+  const anim = objectAnimation(o);
   const sprites = Array.from({ length: anim ? anim.frames : 1 }, (_, f) => getObjectSprite(o, f));
   return {
     sortY: (o.y + o.h) * TILE,
@@ -506,6 +506,21 @@ function updateTask() {
   taskStatusEl.textContent = text;
 }
 
+/** Museum exhibits read per year room, for the green doorway plates. */
+const exhibitsByYear = new Map(MUSEUM_ROOMS.map((r) => [r.year, infoSpots.filter((s) => s.label === 'Münsterhack-Museum' && s.year === r.year)]));
+
+/** Whether every exhibit of a year room was read. */
+function roomRead(year) {
+  return exhibitsByYear.get(year).every((s) => hasProgress('curator', s.year + ' ' + s.name));
+}
+
+/** Count an exhibit as read; completing its room turns the doorway plate green. */
+function readExhibit(spot) {
+  if (hasProgress('curator', spot.year + ' ' + spot.name)) return;
+  achieve('curator', spot.year + ' ' + spot.name);
+  if (roomRead(spot.year)) showToast('Jahrgang ' + spot.year + ' komplett angeschaut!');
+}
+
 /** Show name and year of a referenced project while standing next to it; touch the DOM only on changes. */
 function updateInfo(me) {
   const sq = squirrelAt(wallTime());
@@ -522,6 +537,7 @@ function updateInfo(me) {
   if (sq && Math.hypot(me.x - sq.x, me.y - sq.y) <= INFO_REACH + 8) spot = AICHHOERNCHEN;
   if (spot) {
     if (!spot.label) achieve('history', spot.name);
+    if (spot.label === 'Münsterhack-Museum') readExhibit(spot);
     if (spot === AICHHOERNCHEN) achieve('squirrel');
     if (spot.name === 'Corndex') achieve('kiosk');
   }
@@ -1411,6 +1427,11 @@ function render(now) {
   const waterFrame = Math.floor(now / 350) % WATER_FRAMES;
   ctx.drawImage(ground[waterFrame], 0, 0);
   drawMarker(now);
+  for (const room of MUSEUM_ROOMS) {
+    if (!roomRead(room.year)) continue;
+    const plate = doorPlateAt(room);
+    ctx.drawImage(getDoorPlate(room.year, true), plate.x, plate.y);
+  }
 
   const sortedPlayers = [...players.values()].sort((a, b) => a.y - b.y);
   const drawList = [
